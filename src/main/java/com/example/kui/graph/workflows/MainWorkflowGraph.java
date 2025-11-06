@@ -8,6 +8,7 @@ import org.bsc.langgraph4j.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Configuration;
 
+import java.util.Iterator;
 import java.util.Optional;
 
 import static org.bsc.langgraph4j.StateGraph.END;
@@ -41,12 +42,29 @@ public class MainWorkflowGraph {
     }
     
     public Optional<WorkflowState> graph(WorkflowState state) throws GraphStateException {
-//        Optional<WorkflowState> res = getCompiledGraph().invoke(state.data());
-        System.out.println();
-        AsyncGenerator<NodeOutput<WorkflowState>> ans = getCompiledGraph().stream(state.data());
-        ans.forEach(WorkflowState->{
+        AsyncGenerator<NodeOutput<WorkflowState>> generator = getCompiledGraph().stream(state.data());
 
-        });
-        return null;
+        WorkflowState finalState = null;
+        Iterator<NodeOutput<WorkflowState>> iterator = generator.iterator();
+
+        // 遍历所有节点输出
+        while (iterator.hasNext()) {
+            NodeOutput<WorkflowState> nodeOutput = iterator.next();
+            WorkflowState nodeState = nodeOutput.state();
+
+            if (nodeState != null) {
+                finalState = nodeState;
+                log.debug("Processed node: {}, state: {}", nodeOutput.node(), nodeState);
+            }
+
+            // 如果到达 END 节点，可以提前结束（可选）
+            if (nodeOutput.isEND()) {
+                log.debug("Reached END node");
+                break;
+            }
+        }
+
+        return Optional.ofNullable(finalState);
+
     }
 }

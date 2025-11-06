@@ -47,7 +47,7 @@ public class CodeController {
         workflowState.messages().add(userMessage);
         Optional<WorkflowState> result=graph.graph(workflowState);
 //        return result.toString();
-        return "1";
+        return result.toString();
     }
 
 }
