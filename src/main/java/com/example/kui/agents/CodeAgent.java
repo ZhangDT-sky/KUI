@@ -17,5 +17,5 @@ import static dev.langchain4j.service.spring.AiServiceWiringMode.EXPLICIT;
 public interface CodeAgent {
 
     @SystemMessage("{{systemPrompt}}")
-    Flux<String> chat(@UserMessage String message, @V("systemPrompt")  String prompt);
+    String chat(@UserMessage String message, @V("systemPrompt")  String prompt);
 }

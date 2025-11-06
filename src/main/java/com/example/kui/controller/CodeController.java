@@ -3,16 +3,17 @@ import com.example.kui.agents.CodeAgent;
 import com.example.kui.agents.IntentAgent;
 import com.example.kui.common.enums.PromptKey;
 import com.example.kui.graph.nodes.IntentRecognitionNode;
+import com.example.kui.graph.state.WorkflowState;
 import com.example.kui.graph.workflows.MainWorkflowGraph;
 import com.example.kui.util.PromptUtil;
+import org.bsc.async.AsyncGenerator;
+import org.bsc.langgraph4j.NodeOutput;
 import org.bsc.langgraph4j.state.AgentState;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 
 
 @RestController
@@ -34,17 +35,19 @@ public class CodeController {
     @Autowired
     private MainWorkflowGraph graph;
 
+    private final WorkflowState workflowState = new WorkflowState(Map.of(WorkflowState.MESSAGES_KEY,new ArrayList<>())) ;
+
     @PostMapping("/chat")
-    public Flux<String> chat(@RequestBody String userMessage){
+    public String chat(@RequestBody String userMessage){
         return codeAgent.chat(userMessage,promptUtil.getPrompt(PromptKey.CODE_SOLVE));
     }
 
     @GetMapping("getIntent")
     public String getIntent(@RequestBody String userMessage) throws Exception {
-        Map<String,Object> map = new HashMap<>();
-        map.put("message",userMessage);
-        AgentState agentState = new AgentState(map);
-        Optional<AgentState> result = graph.graph(agentState);
-        return result.toString();
+        workflowState.messages().add(userMessage);
+        Optional<WorkflowState> result=graph.graph(workflowState);
+//        return result.toString();
+        return "1";
     }
+
 }
