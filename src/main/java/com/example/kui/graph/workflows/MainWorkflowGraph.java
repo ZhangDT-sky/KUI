@@ -34,8 +34,10 @@ public class MainWorkflowGraph {
 //                            intentRecognitionNode
 //                    ))
                     .addNode("CodeDebugNode",node_async(codeDebugNode))
+//                    .addEdge(START,"IntentRecognitionNode")
                     .addEdge(START,"CodeDebugNode")
                     .addEdge("CodeDebugNode",END);
+//                    .addEdge("IntentRecognitionNode",END);
             compiledGraph = work.compile();
         }
         return compiledGraph;
