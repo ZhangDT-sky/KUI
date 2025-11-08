@@ -18,4 +18,11 @@ public interface CodeAgent {
 
     @SystemMessage("{{systemPrompt}}")
     String chat(@UserMessage String message, @V("systemPrompt")  String prompt);
+
+    @SystemMessage("{{systemPrompt}}")
+    String testCases(@UserMessage String message, @V("systemPrompt")  String prompt);
+
+    @SystemMessage("{{systemPrompt}}")
+    String codeVerify(@UserMessage String message, @UserMessage String test,  @V("systemPrompt")  String prompt);
+    
 }
