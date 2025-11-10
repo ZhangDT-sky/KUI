@@ -7,11 +7,9 @@ import com.example.kui.util.ExecutorUtil;
 import com.example.kui.util.PromptUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.bsc.langgraph4j.action.NodeAction;
-import org.bsc.langgraph4j.state.AgentState;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
@@ -19,7 +17,7 @@ import java.util.concurrent.ExecutorService;
 
 @Slf4j
 @Component
-public class CodeDebugNode implements NodeAction<WorkflowState> {
+public class CodeSolveNode implements NodeAction<WorkflowState> {
 
     @Autowired
     private CodeAgent codeAgent;
@@ -59,9 +57,8 @@ public class CodeDebugNode implements NodeAction<WorkflowState> {
         String testMessage = testCasesFuture.get();
         String aiMessage = chatFuture.get();
         String verifyMessage = codeAgent.codeVerify(aiMessage,testMessage,promptUtil.getPrompt(PromptKey.CODE_VERIFY));
-
         return Map.of(
-                WorkflowState.MESSAGES_KEY,List.of(aiMessage,verifyMessage)
+                WorkflowState.MESSAGES_KEY,List.of(verifyMessage,aiMessage)
         );
     }
 }
