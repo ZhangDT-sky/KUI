@@ -5,6 +5,8 @@ import com.example.kui.common.enums.PromptKey;
 import com.example.kui.graph.state.WorkflowState;
 import com.example.kui.util.ExecutorUtil;
 import com.example.kui.util.PromptUtil;
+import dev.langchain4j.data.message.AiMessage;
+import dev.langchain4j.data.message.ChatMessage;
 import lombok.extern.slf4j.Slf4j;
 import org.bsc.langgraph4j.action.NodeAction;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -30,8 +32,12 @@ public class CodeSolveNode implements NodeAction<WorkflowState> {
 
     @Override
     public Map<String, Object> apply(WorkflowState state) throws Exception {
-        String userMessage = state.messages().get(state.messages().size()-1);
-
+        List<ChatMessage> allMessages = state.messages();
+        String userMessage = allMessages.stream()
+                .filter(msg -> msg instanceof dev.langchain4j.data.message.UserMessage)
+                .map(msg -> ((dev.langchain4j.data.message.UserMessage) msg).toString())
+                .reduce((first, second) -> second)  // 获取最后一条
+                .orElseThrow(() -> new RuntimeException("No user message found"));
         // 使用共享线程池，无需手动关闭
         ExecutorService executorService = executorUtil.getSharedExecutor();
 
@@ -57,8 +63,13 @@ public class CodeSolveNode implements NodeAction<WorkflowState> {
         String testMessage = testCasesFuture.get();
         String aiMessage = chatFuture.get();
         String verifyMessage = codeAgent.codeVerify(aiMessage,testMessage,promptUtil.getPrompt(PromptKey.CODE_VERIFY));
-        return Map.of(
-                WorkflowState.MESSAGES_KEY,List.of(verifyMessage,aiMessage)
+        // 返回 AiMessage 列表
+        // MessagesState 会自动追加到现有消息列表
+        List<AiMessage> responseMessages = List.of(
+                AiMessage.from(verifyMessage),
+                AiMessage.from(aiMessage)
         );
+
+        return Map.of("messages", responseMessages);
     }
 }

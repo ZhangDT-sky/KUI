@@ -1,11 +1,13 @@
 package com.example.kui.graph.workflows;
 import com.example.kui.graph.nodes.CodeSolveNode;
 import com.example.kui.graph.nodes.IntentRecognitionNode;
+import com.example.kui.graph.nodes.OtherNode;
 import com.example.kui.graph.state.WorkflowState;
 import lombok.extern.slf4j.Slf4j;
 import org.bsc.async.AsyncGenerator;
 import org.bsc.langgraph4j.*;
 import org.bsc.langgraph4j.checkpoint.MemorySaver;
+import org.bsc.langgraph4j.langchain4j.serializer.jackson.LC4jJacksonStateSerializer;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Configuration;
 
@@ -27,35 +29,44 @@ public class MainWorkflowGraph {
     @Autowired
     private CodeSolveNode codeSolveNode;
 
-    // 将编译后的图缓存起来，避免每次调用都重新编译
+    @Autowired
+    private OtherNode otherNode;
+
     private CompiledGraph<WorkflowState> compiledGraph;
-    
+
     private CompiledGraph<WorkflowState> getCompiledGraph() throws GraphStateException {
         if (compiledGraph == null) {
-            StateGraph<WorkflowState> work = new StateGraph<>(WorkflowState.SCHEMA, WorkflowState::new)
+            var serializer = new LC4jJacksonStateSerializer<>(WorkflowState::new);
+
+            StateGraph<WorkflowState> work = new StateGraph<>(
+                    WorkflowState.SCHEMA,
+                    serializer  // 使用 Jackson 序列化器而不是默认的
+            )
                     .addNode("IntentRecognitionNode", node_async(
                             intentRecognitionNode
                     ))
                     .addNode("CodeSolveNode",node_async(codeSolveNode))
+                    .addNode("OtherNode", node_async(otherNode))
                     .addEdge(START,"IntentRecognitionNode")
                     .addConditionalEdges("IntentRecognitionNode",
                             edge_async(state->{
-                                String recognizedIntent = state.intentRecognition();
+                                String recognizedIntent = state.intentRecognition().orElse("Other");
                                 System.out.println("===============test==============");
                                 System.out.println(recognizedIntent);
                                 if (recognizedIntent.equals("PROBLEM_SOLVING")) {
                                     return "CodeSolveNode";
                                 }
                                 else{
-                                    return END;
+                                    return "OtherNode";
                                 }
                             }),
                             Map.of(
                             "CodeSolveNode", "CodeSolveNode",
-                                END, END
+                            "OtherNode","OtherNode"
                             )
                     )
-                    .addEdge("CodeSolveNode",END);
+                    .addEdge("CodeSolveNode",END)
+                    .addEdge("OtherNode",END);
 //                    .addEdge("IntentRecognitionNode",END);
             var checkPointSaver = new MemorySaver();
             var config = CompileConfig.builder()

@@ -4,6 +4,7 @@ import com.example.kui.agents.IntentAgent;
 import com.example.kui.common.enums.PromptKey;
 import com.example.kui.graph.state.WorkflowState;
 import com.example.kui.util.PromptUtil;
+import dev.langchain4j.data.message.ChatMessage;
 import lombok.extern.slf4j.Slf4j;
 import org.bsc.langgraph4j.action.NodeAction;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -11,6 +12,7 @@ import org.springframework.stereotype.Component;
 
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Component
@@ -24,8 +26,8 @@ public class IntentRecognitionNode implements NodeAction<WorkflowState> {
 
     @Override
     public Map<String, Object> apply(WorkflowState state) throws Exception {
-        List<String> messages = state.messages();
-        String intent = intentAgent.chat(messages.get(messages.size()-1),promptUtil.getPrompt(PromptKey.INTENT_RECOGNIZE));
+        List<ChatMessage> messages = state.messages();
+        String intent = intentAgent.chat(messages,promptUtil.getPrompt(PromptKey.INTENT_RECOGNIZE));
         return Map.of(WorkflowState.INTENT_RECOGNITION_KEY, intent);
     }
 }

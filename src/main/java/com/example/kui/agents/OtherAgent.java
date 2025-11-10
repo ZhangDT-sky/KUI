@@ -1,13 +1,9 @@
 package com.example.kui.agents;
 
-import dev.langchain4j.data.message.ChatMessage;
 import dev.langchain4j.service.SystemMessage;
 import dev.langchain4j.service.UserMessage;
 import dev.langchain4j.service.V;
 import dev.langchain4j.service.spring.AiService;
-import reactor.core.publisher.Flux;
-
-import java.util.List;
 
 import static dev.langchain4j.service.spring.AiServiceWiringMode.EXPLICIT;
 
@@ -16,7 +12,7 @@ import static dev.langchain4j.service.spring.AiServiceWiringMode.EXPLICIT;
         streamingChatModel = "openAiStreamingChatModel",
         chatMemory = "chatMemory"
 )
-public interface IntentAgent {
+public interface OtherAgent {
     @SystemMessage("{{systemPrompt}}")
-    String chat(@UserMessage List<ChatMessage> message, @V("systemPrompt") String prompt);
+    String chat(@UserMessage String message, @V("systemPrompt") String prompt);
 }
