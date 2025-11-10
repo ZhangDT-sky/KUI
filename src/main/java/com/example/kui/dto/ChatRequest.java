@@ -1,4 +1,8 @@
 package com.example.kui.dto;
 
-public class ChatRequest {
-}
+import java.util.List;
+
+public record ChatRequest(
+        List<String> messages,
+        String threadId
+) {}
