@@ -1,4 +1,4 @@
-package com.example.kui.dto;
+package com.example.kui.common.dto;
 
 public record ChatResponse(
         String message,

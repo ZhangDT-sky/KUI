@@ -12,6 +12,12 @@ langchain4j:
       model-name: qwen-plus
       log-responses: true
       log-requests: true
+  community:
+    redis:
+      host: localhost
+      port: 6379
+      dimension: 384
+
 
 logging:
   level:

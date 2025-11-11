@@ -1,6 +1,4 @@
-package com.example.kui.dto;
-
-import dev.langchain4j.data.message.ChatMessage;
+package com.example.kui.common.dto;
 
 import java.util.List;
 
