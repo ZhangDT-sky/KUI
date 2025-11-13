@@ -1,6 +1,7 @@
 package com.example.kui.agents;
 
 import com.example.kui.common.enums.PromptKey;
+import dev.langchain4j.service.MemoryId;
 import dev.langchain4j.service.SystemMessage;
 import dev.langchain4j.service.UserMessage;
 import dev.langchain4j.service.V;
@@ -17,12 +18,12 @@ import static dev.langchain4j.service.spring.AiServiceWiringMode.EXPLICIT;
 public interface CodeAgent {
 
     @SystemMessage("{{systemPrompt}}")
-    String chat(@UserMessage String message, @V("systemPrompt")  String prompt);
+    String chat(@MemoryId String memoryId, @UserMessage String message, @V("systemPrompt")  String prompt);
 
     @SystemMessage("{{systemPrompt}}")
-    String testCases(@UserMessage String message, @V("systemPrompt")  String prompt);
+    String testCases(@MemoryId String memoryId,@UserMessage String message, @V("systemPrompt")  String prompt);
 
     @SystemMessage("{{systemPrompt}}")
-    String codeVerify(@UserMessage String message, @UserMessage String test,  @V("systemPrompt")  String prompt);
+    String codeVerify(@MemoryId String memoryId,@UserMessage String message, @UserMessage String test,  @V("systemPrompt")  String prompt);
     
 }

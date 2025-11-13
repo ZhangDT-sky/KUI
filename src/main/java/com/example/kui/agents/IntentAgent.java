@@ -1,6 +1,7 @@
 package com.example.kui.agents;
 
 import dev.langchain4j.data.message.ChatMessage;
+import dev.langchain4j.service.MemoryId;
 import dev.langchain4j.service.SystemMessage;
 import dev.langchain4j.service.UserMessage;
 import dev.langchain4j.service.V;
@@ -18,5 +19,5 @@ import static dev.langchain4j.service.spring.AiServiceWiringMode.EXPLICIT;
 )
 public interface IntentAgent {
     @SystemMessage("{{systemPrompt}}")
-    String chat(@UserMessage List<ChatMessage> message, @V("systemPrompt") String prompt);
+    String chat(@MemoryId String memoryId, @UserMessage List<ChatMessage> message, @V("systemPrompt") String prompt);
 }

@@ -26,9 +26,11 @@ public class KnowledgeRetrievalNode implements NodeAction<WorkflowState> {
     @Override
     public Map<String, Object> apply(WorkflowState state) throws Exception {
         List<ChatMessage> messages = state.messages();
+        String threadId = state.threadId()
+                .orElseThrow(() -> new IllegalStateException("threadId missing"));
         String userMessage = messages.get(messages.size()-1).toString();
         System.out.println("用户输入内容:"+userMessage);
-        String aiMessage = knowledgeAgent.chat(userMessage,promptUtil.getPrompt(PromptKey.KNOWLEDGE_RETRIEVAL));
+        String aiMessage = knowledgeAgent.chat(threadId,userMessage,promptUtil.getPrompt(PromptKey.KNOWLEDGE_RETRIEVAL));
         return Map.of(
                 "messages",aiMessage
         );
