@@ -1,6 +1,7 @@
 package com.example.kui.graph.workflows;
 import com.example.kui.graph.nodes.CodeSolveNode;
 import com.example.kui.graph.nodes.IntentRecognitionNode;
+import com.example.kui.graph.nodes.KnowledgeRetrievalNode;
 import com.example.kui.graph.nodes.OtherNode;
 import com.example.kui.graph.state.WorkflowState;
 import lombok.extern.slf4j.Slf4j;
@@ -32,6 +33,9 @@ public class MainWorkflowGraph {
     @Autowired
     private OtherNode otherNode;
 
+    @Autowired
+    private KnowledgeRetrievalNode knowledgeRetrievalNode;
+
     private CompiledGraph<WorkflowState> compiledGraph;
 
     private CompiledGraph<WorkflowState> getCompiledGraph() throws GraphStateException {
@@ -47,6 +51,7 @@ public class MainWorkflowGraph {
                     ))
                     .addNode("CodeSolveNode",node_async(codeSolveNode))
                     .addNode("OtherNode", node_async(otherNode))
+                    .addNode("KnowledgeRetrievalNode",node_async(knowledgeRetrievalNode))
                     .addEdge(START,"IntentRecognitionNode")
                     .addConditionalEdges("IntentRecognitionNode",
                             edge_async(state->{
@@ -56,16 +61,21 @@ public class MainWorkflowGraph {
                                 if (recognizedIntent.equals("PROBLEM_SOLVING")) {
                                     return "CodeSolveNode";
                                 }
+                                else if (recognizedIntent.equals("TEMPLATE_RECOMMENDATION")) {
+                                    return "KnowledgeRetrievalNode";
+                                }
                                 else{
                                     return "OtherNode";
                                 }
                             }),
                             Map.of(
-                            "CodeSolveNode", "CodeSolveNode",
-                            "OtherNode","OtherNode"
+                                "CodeSolveNode", "CodeSolveNode",
+                                "OtherNode","OtherNode",
+                                "KnowledgeRetrievalNode","KnowledgeRetrievalNode"
                             )
                     )
                     .addEdge("CodeSolveNode",END)
+                    .addEdge("KnowledgeRetrievalNode",END)
                     .addEdge("OtherNode",END);
 //                    .addEdge("IntentRecognitionNode",END);
             var checkPointSaver = new MemorySaver();
