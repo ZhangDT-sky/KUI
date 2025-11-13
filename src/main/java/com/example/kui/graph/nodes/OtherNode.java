@@ -27,11 +27,9 @@ public class OtherNode implements NodeAction<WorkflowState> {
     @Override
     public Map<String, Object> apply(WorkflowState state) throws Exception {
         List<ChatMessage> allMessages = state.messages();
-        String userMessage = allMessages.stream()
-                .filter(msg -> msg instanceof dev.langchain4j.data.message.UserMessage)
-                .map(msg -> ((dev.langchain4j.data.message.UserMessage) msg).toString())
-                .reduce((first, second) -> second)  // 获取最后一条
-                .orElseThrow(() -> new RuntimeException("No user message found"));        String aiMessage = agent.chat(userMessage,promptUtil.getPrompt(PromptKey.AI_CHAT));
+        String userMessage = allMessages.get(allMessages.size() - 1).toString();
+        System.out.println("用户输入内容:"+userMessage);
+        String aiMessage = agent.chat(userMessage,promptUtil.getPrompt(PromptKey.AI_CHAT));
         return Map.of(
                 "messages",aiMessage
         );

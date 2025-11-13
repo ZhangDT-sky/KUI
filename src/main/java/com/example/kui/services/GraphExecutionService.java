@@ -4,6 +4,7 @@ import com.example.kui.common.dto.ChatRequest;
 import com.example.kui.common.dto.ChatResponse;
 import com.example.kui.graph.state.WorkflowState;
 import com.example.kui.graph.workflows.MainWorkflowGraph;
+import com.example.kui.memory.RedisChatMemoryStore;
 import dev.langchain4j.data.message.AiMessage;
 import dev.langchain4j.data.message.ChatMessage;
 import dev.langchain4j.data.message.UserMessage;
@@ -22,12 +23,20 @@ public class GraphExecutionService {
     @Autowired
     private MainWorkflowGraph graph;
 
+    @Autowired
+    private RedisChatMemoryStore chatMemoryStore;
+
     public ChatResponse chat(ChatRequest request) throws GraphStateException {
         String threadId = request.threadId();
         if (threadId == null || threadId.isEmpty()) {
             threadId = UUID.randomUUID().toString();
         }
-        List<ChatMessage> messages = convertToLangchain4j(request.messages());
+
+        System.out.println("==================");
+        System.out.println("threadId = " + threadId);
+        System.out.println("==================");
+
+        List<ChatMessage> messages = convertToLangchain4j(threadId,request.messages());
         Map<String,Object> initialState = Map.of(
                 "messages",messages
         );
@@ -35,31 +44,30 @@ public class GraphExecutionService {
                 .threadId(threadId)
                 .build();
         Optional<WorkflowState> result = graph.graph(initialState,config);
-        if (result.isEmpty()) {
-            throw new RuntimeException("Workflow execution failed");
-        }
 
         WorkflowState finalState = result.get();
 
-        AiMessage lastMessage = finalState.lastMessage()
-                .map(AiMessage.class::cast)
-                .orElseThrow(() -> new RuntimeException("No AI message found"));
-
+        if (result.isEmpty()) {
+            throw new RuntimeException("Workflow execution failed");
+        }
+        System.out.println(finalState.lastMessage().get());
+        AiMessage lastMessage =AiMessage.from(String.valueOf(finalState.lastMessage()));
+        messages.add(lastMessage);
+        chatMemoryStore.updateMessages(threadId,messages);
         return new ChatResponse(
                 lastMessage.text(),
                 threadId
         );
     }
-    private List<ChatMessage> convertToLangchain4j(List<ChatRequest.ChatMessage> requestMessages) {
-        List<ChatMessage> chatHistory = new ArrayList<>();
-
-        for (ChatRequest.ChatMessage msg : requestMessages) {
-            if ("user".equals(msg.role())) {
-                chatHistory.add(UserMessage.from(msg.content()));
-            } else if ("assistant".equals(msg.role())) {
-                chatHistory.add(AiMessage.from(msg.content()));
-            }
+    private List<ChatMessage> convertToLangchain4j(String threadId, ChatRequest.ChatMessage msg) {
+        System.out.println(chatMemoryStore.getMessages(threadId));
+        List<ChatMessage> chatHistory = new ArrayList<>(chatMemoryStore.getMessages(threadId));
+        if (msg.role()==null || "user".equals(msg.role())) {
+            chatHistory.add(UserMessage.from(msg.content()));
+        } else if ("assistant".equals(msg.role())) {
+            chatHistory.add(AiMessage.from(msg.content()));
         }
+        chatMemoryStore.updateMessages(threadId,chatHistory);
         return chatHistory;
     }
 
