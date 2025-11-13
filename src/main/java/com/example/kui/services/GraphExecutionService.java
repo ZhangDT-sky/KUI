@@ -38,7 +38,8 @@ public class GraphExecutionService {
 
         List<ChatMessage> messages = convertToLangchain4j(threadId,request.messages());
         Map<String,Object> initialState = Map.of(
-                "messages",messages
+                "messages",messages,
+                "threadId",threadId
         );
         RunnableConfig config = RunnableConfig.builder()
                 .threadId(threadId)
@@ -52,8 +53,8 @@ public class GraphExecutionService {
         }
         System.out.println(finalState.lastMessage().get());
         AiMessage lastMessage =AiMessage.from(String.valueOf(finalState.lastMessage()));
-        messages.add(lastMessage);
-        chatMemoryStore.updateMessages(threadId,messages);
+//        messages.add(lastMessage);
+//        chatMemoryStore.updateMessages(threadId,messages);
         return new ChatResponse(
                 lastMessage.text(),
                 threadId
@@ -67,7 +68,6 @@ public class GraphExecutionService {
         } else if ("assistant".equals(msg.role())) {
             chatHistory.add(AiMessage.from(msg.content()));
         }
-        chatMemoryStore.updateMessages(threadId,chatHistory);
         return chatHistory;
     }
 

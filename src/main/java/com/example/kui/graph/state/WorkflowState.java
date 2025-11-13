@@ -16,6 +16,7 @@ import java.util.Optional;
 
 public class WorkflowState extends MessagesState<ChatMessage> {
     public static final String INTENT_RECOGNITION_KEY = "intentRecognition";
+    public static final String THREAD_ID = "threadId";
 
     public WorkflowState(Map<String, Object> initData) {
         super(initData);
@@ -26,6 +27,6 @@ public class WorkflowState extends MessagesState<ChatMessage> {
     public Optional<String> intentRecognition(){
         return value(INTENT_RECOGNITION_KEY);
     }
-
+    public Optional<String> threadId(){return value(THREAD_ID);}
 
 }
