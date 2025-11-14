@@ -12,6 +12,7 @@ import dev.langchain4j.service.spring.AiServiceWiringMode;
         chatModel = "openAiChatModel",
         streamingChatModel = "openAiStreamingChatModel",
         chatMemory = "chatMemory",
+        chatMemoryProvider = "chatMemoryProvider",
         contentRetriever = "contentRetriever"
 )
 public interface KnowledgeAgent {
