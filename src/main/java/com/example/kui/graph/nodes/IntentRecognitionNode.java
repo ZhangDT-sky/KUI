@@ -27,7 +27,9 @@ public class IntentRecognitionNode implements NodeAction<WorkflowState> {
     @Override
     public Map<String, Object> apply(WorkflowState state) throws Exception {
         List<ChatMessage> messages = state.messages();
-        String intent = intentAgent.chat(messages,promptUtil.getPrompt(PromptKey.INTENT_RECOGNIZE));
+        String threadId = state.threadId()
+                .orElseThrow(() -> new IllegalStateException("threadId missing"));
+        String intent = intentAgent.chat(threadId,messages,promptUtil.getPrompt(PromptKey.INTENT_RECOGNIZE));
         return Map.of(WorkflowState.INTENT_RECOGNITION_KEY, intent);
     }
 }
