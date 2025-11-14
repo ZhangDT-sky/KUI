@@ -18,6 +18,10 @@ langchain4j:
       port: 6379
       dimension: 384
 
+kui:
+  content:
+    auto-load-on-startup: false
+    base-path: content
 
 logging:
   level:
