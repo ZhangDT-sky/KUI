@@ -53,6 +53,11 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
         </dependency>
+        <!--添加 JDBC Starter 依赖。-->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-jdbc</artifactId>
+        </dependency>
 
         <dependency>
             <groupId>com.mysql</groupId>
@@ -107,6 +112,20 @@
         <dependency>
             <groupId>org.bsc.langgraph4j</groupId>
             <artifactId>langgraph4j-langchain4j</artifactId>
+        </dependency>
+
+        <!--pgvector-->
+        <dependency>
+            <groupId>dev.langchain4j</groupId>
+            <artifactId>langchain4j-pgvector</artifactId>
+            <version>1.0.1-beta6</version>   <!-- 从 1.0.0-beta3 升级到 1.0.1-beta6 -->
+        </dependency>
+
+        <!--rag easy-->
+        <dependency>
+            <groupId>dev.langchain4j</groupId>
+            <artifactId>langchain4j-easy-rag</artifactId>
+            <version>1.0.1-beta6</version>
         </dependency>
 
     </dependencies>
