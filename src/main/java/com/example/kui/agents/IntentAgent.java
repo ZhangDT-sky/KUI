@@ -15,7 +15,8 @@ import static dev.langchain4j.service.spring.AiServiceWiringMode.EXPLICIT;
 @AiService(wiringMode = EXPLICIT,
         chatModel = "openAiChatModel",
         streamingChatModel = "openAiStreamingChatModel",
-        chatMemory = "chatMemory"
+        chatMemory = "chatMemory",
+        chatMemoryProvider = "chatMemoryProvider"
 )
 public interface IntentAgent {
     @SystemMessage("{{systemPrompt}}")
