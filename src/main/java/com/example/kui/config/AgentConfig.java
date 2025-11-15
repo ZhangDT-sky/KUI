@@ -79,8 +79,8 @@ public class AgentConfig {
         return EmbeddingStoreIngestor.builder()
                 .embeddingStore(pgVectorEmbeddingStore)
                 .embeddingModel(embeddingModel)
-                // 配置文档分割器：每个chunk最大1000字符，重叠50字符，确保小文档不会被过度分割
-                .documentSplitter(DocumentSplitters.recursive(1000, 50))
+                // 配置文档分割器：每个chunk最大5600字符，重叠50字符，确保小文档不会被过度分割
+                .documentSplitter(DocumentSplitters.recursive(5600, 50))
                 .build();
     }
 
