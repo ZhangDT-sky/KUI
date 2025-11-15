@@ -79,8 +79,8 @@ public class AgentConfig {
         return EmbeddingStoreIngestor.builder()
                 .embeddingStore(pgVectorEmbeddingStore)
                 .embeddingModel(embeddingModel)
-                // 配置文档分割器：每个chunk最大5600字符，重叠50字符，确保小文档不会被过度分割
-                .documentSplitter(DocumentSplitters.recursive(5600, 50))
+                // 配置文档分割器：每个chunk最大5000字符，重叠50字符，确保小文档不会被过度分割
+                .documentSplitter(DocumentSplitters.recursive(5000, 50))
                 .build();
     }
 
@@ -180,7 +180,7 @@ public class AgentConfig {
                 .embeddingStore(pgVectorEmbeddingStore)
                 .embeddingModel(embeddingModel)
                 .minScore(0.0)  // 降低阈值，让更多相关结果通过
-                .maxResults(100)   // 增加返回结果数量，提高多样性（后续可能需要去重）
+                .maxResults(30)   // 增加返回结果数量，提高多样性（后续可能需要去重）
                 .build();
     }
 }
