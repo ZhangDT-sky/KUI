@@ -128,6 +128,12 @@
             <version>1.0.1-beta6</version>
         </dependency>
 
+        <!--添加apache 破地方解析器-->
+        <dependency>
+            <groupId>dev.langchain4j</groupId>
+            <artifactId>langchain4j-document-parser-apache-pdfbox</artifactId>
+            <version>1.0.1-beta6</version>
+        </dependency>
     </dependencies>
 
     <build>
