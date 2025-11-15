@@ -39,6 +39,9 @@ public class CodeSolveNode implements NodeAction<WorkflowState> {
         List<ChatMessage> allMessages = state.messages();
         String userMessage = allMessages.get(allMessages.size()-1).toString();
         String escapedUserMessage = chatMessageUtil.escapeStringContent(userMessage);
+        System.out.println("对比。。。。。。。。。。。。。。。。。。。。。。。");
+        System.out.println(userMessage);
+        System.out.println(escapedUserMessage);
         String threadId = state.threadId()
             .orElseThrow(() -> new IllegalStateException("threadId missing"));
         // 使用共享线程池，无需手动关闭

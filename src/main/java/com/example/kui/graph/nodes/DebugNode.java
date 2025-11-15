@@ -34,7 +34,7 @@ public class DebugNode implements NodeAction<WorkflowState> {
                 .filter(msg -> msg instanceof ChatMessage)
                 .map(chatMessageUtil::escapeMessageContent)
                 .filter(msg -> msg != null)
-                .collect(Collectors.toList());
+                .toList();
         String threadId = state.threadId()
                 .orElseThrow(()->new IllegalStateException("threadId missing"));
         String debugMessage = debugAgent.debug(threadId,allMessages,promptUtil.getPrompt(PromptKey.CODE_DEBUG));

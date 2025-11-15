@@ -35,7 +35,7 @@ public class IntentRecognitionNode implements NodeAction<WorkflowState> {
                 .filter(msg -> msg instanceof ChatMessage)
                 .map(chatMessageUtil::escapeMessageContent)
                 .filter(msg -> msg != null)
-                .collect(Collectors.toList());
+                .toList();
         String threadId = state.threadId()
                 .orElseThrow(() -> new IllegalStateException("threadId missing"));
         String intent = intentAgent.chat(threadId, escapedMessages, promptUtil.getPrompt(PromptKey.INTENT_RECOGNIZE));

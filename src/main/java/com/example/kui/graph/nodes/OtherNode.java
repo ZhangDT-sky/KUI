@@ -36,7 +36,7 @@ public class OtherNode implements NodeAction<WorkflowState> {
                 .filter(msg -> msg instanceof ChatMessage)
                 .map(chatMessageUtil::escapeMessageContent)
                 .filter(msg -> msg != null)
-                .collect(Collectors.toList());
+                .toList();
         String threadId = state.threadId()
                 .orElseThrow(() -> new IllegalStateException("threadId missing"));
         System.out.println("other 节点："+threadId);
