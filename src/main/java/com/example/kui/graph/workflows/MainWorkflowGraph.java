@@ -1,8 +1,5 @@
 package com.example.kui.graph.workflows;
-import com.example.kui.graph.nodes.CodeSolveNode;
-import com.example.kui.graph.nodes.IntentRecognitionNode;
-import com.example.kui.graph.nodes.KnowledgeRetrievalNode;
-import com.example.kui.graph.nodes.OtherNode;
+import com.example.kui.graph.nodes.*;
 import com.example.kui.graph.state.WorkflowState;
 import lombok.extern.slf4j.Slf4j;
 import org.bsc.async.AsyncGenerator;
@@ -31,6 +28,9 @@ public class MainWorkflowGraph {
     private CodeSolveNode codeSolveNode;
 
     @Autowired
+    private DebugNode debugNode;
+
+    @Autowired
     private OtherNode otherNode;
 
     @Autowired
@@ -52,10 +52,11 @@ public class MainWorkflowGraph {
                     .addNode("CodeSolveNode",node_async(codeSolveNode))
                     .addNode("OtherNode", node_async(otherNode))
                     .addNode("KnowledgeRetrievalNode",node_async(knowledgeRetrievalNode))
+                    .addNode("DebugNode",node_async(debugNode))
                     .addEdge(START,"IntentRecognitionNode")
                     .addConditionalEdges("IntentRecognitionNode",
                             edge_async(state->{
-                                String recognizedIntent = state.intentRecognition().orElse("Other");
+                                String recognizedIntent = state.intentRecognition().orElse("OTHER");
                                 System.out.println("===============test==============");
                                 System.out.println(recognizedIntent);
                                 if (recognizedIntent.equals("PROBLEM_SOLVING")) {
@@ -64,6 +65,9 @@ public class MainWorkflowGraph {
                                 else if (recognizedIntent.equals("TEMPLATE_RECOMMENDATION")) {
                                     return "KnowledgeRetrievalNode";
                                 }
+                                else if (recognizedIntent.equals("CODE_DEBUGGING")) {
+                                    return "DebugNode";
+                                }
                                 else{
                                     return "OtherNode";
                                 }
@@ -71,9 +75,11 @@ public class MainWorkflowGraph {
                             Map.of(
                                 "CodeSolveNode", "CodeSolveNode",
                                 "OtherNode","OtherNode",
-                                "KnowledgeRetrievalNode","KnowledgeRetrievalNode"
+                                "KnowledgeRetrievalNode","KnowledgeRetrievalNode",
+                                "DebugNode","DebugNode"
                             )
                     )
+                    .addEdge("DebugNode",END)
                     .addEdge("CodeSolveNode",END)
                     .addEdge("KnowledgeRetrievalNode",END)
                     .addEdge("OtherNode",END);
