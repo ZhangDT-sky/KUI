@@ -24,18 +24,20 @@ prompts:
       - 必须严格以JSON格式返回结果
       - JSON包含两个字段：
         * "problemAnalysis": 字符串，包含对题目的详细分析，包括问题理解、算法思路、复杂度分析等
-        * "code": 字符串，包含完整的、可执行的代码解决方案
+        * "code": 字符串，包含完整的、可执行的代码解决方案，必须使用Markdown代码块格式
       
       输出示例：
       {
         "problemAnalysis": "这是一道动态规划问题。题目要求...算法思路：使用dp[i]表示...时间复杂度为O(n)，空间复杂度为O(n)。",
-        "code": "public class Solution {\n    public int solve(int[] nums) {\n        // 代码实现\n    }\n}"
+        "code": "```cpp\n#include <iostream>\n#include <vector>\nusing namespace std;\n\nint main() {\n    // 代码实现\n    return 0;\n}\n```"
       }
       
       注意：
       - problemAnalysis应该清晰、详细地说明解题思路和算法设计
-      - code应该是完整的、可编译运行的代码，符合题目要求的编程语言
-      - 确保返回的JSON格式正确，可以被标准JSON解析器解析
+      - code字段必须使用Markdown代码块格式，格式为：```语言标识符\n代码内容\n```
+      - 语言标识符应该与代码的编程语言对应（如cpp、java、python等）
+      - 代码应该是完整的、可编译运行的代码，符合题目要求的编程语言
+      - 确保返回的JSON格式正确，code字段中的换行符需要使用\n转义
       - 代码中应包含必要的注释，提高可读性
 
   test-cases:
@@ -124,7 +126,7 @@ prompts:
           "errorReason": "字符串，分析失败的原因"
         },
         "problemAnalysis": "字符串，基于失败用例重新分析的题目思路，包括问题分析、失败原因分析、修正后的算法思路",
-        "code": "字符串，修正后的完整代码"
+        "code": "字符串，修正后的完整代码，必须使用Markdown代码块格式"
       }
       
       输出示例（全部通过）：
@@ -144,7 +146,7 @@ prompts:
           "errorReason": "代码在处理负数时出现逻辑错误，没有正确累加负数"
         },
         "problemAnalysis": "原代码在处理包含负数的情况时存在问题。重新分析：题目要求计算所有元素的和，包括负数。失败原因：累加逻辑错误。修正思路：确保正确处理所有整数，包括负数。",
-        "code": "public class Solution {\n    public int solve(int[] nums) {\n        int sum = 0;\n        for (int num : nums) {\n            sum += num;\n        }\n        return sum;\n    }\n}"
+        "code": "```java\npublic class Solution {\n    public int solve(int[] nums) {\n        int sum = 0;\n        for (int num : nums) {\n            sum += num;\n        }\n        return sum;\n    }\n}\n```"
       }
       
       注意：
@@ -152,6 +154,8 @@ prompts:
       - 如果代码无法通过某个测试用例，必须详细分析失败原因
       - 重新生成的代码应该能够解决之前失败的问题，同时保持对其他测试用例的正确性
       - problemAnalysis要包含失败原因分析和修正思路
-      - 确保返回的JSON格式正确，可以被标准JSON解析器解析
+      - code字段必须使用Markdown代码块格式，格式为：```语言标识符\n代码内容\n```
+      - 语言标识符应该与代码的编程语言对应（如cpp、java、python等）
+      - 确保返回的JSON格式正确，code字段中的换行符需要使用\n转义
       - 在模拟执行代码时，要考虑各种边界情况和特殊输入
       
