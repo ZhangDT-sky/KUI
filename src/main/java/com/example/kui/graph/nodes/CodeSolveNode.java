@@ -33,12 +33,8 @@ public class CodeSolveNode implements NodeAction<WorkflowState> {
     @Override
     public Map<String, Object> apply(WorkflowState state) throws Exception {
         List<ChatMessage> allMessages = state.messages();
-        String userMessage = allMessages.stream()
-                .filter(msg -> msg instanceof dev.langchain4j.data.message.UserMessage)
-                .map(msg -> ((dev.langchain4j.data.message.UserMessage) msg).toString())
-                .reduce((first, second) -> second)  // 获取最后一条
-                .orElseThrow(() -> new RuntimeException("No user message found"));
-       String threadId = state.threadId()
+        String userMessage = allMessages.get(allMessages.size()-1).toString();
+        String threadId = state.threadId()
             .orElseThrow(() -> new IllegalStateException("threadId missing"));
         // 使用共享线程池，无需手动关闭
         ExecutorService executorService = executorUtil.getSharedExecutor();
