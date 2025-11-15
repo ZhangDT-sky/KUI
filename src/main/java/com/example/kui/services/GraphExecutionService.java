@@ -57,6 +57,7 @@ public class GraphExecutionService {
 //        chatMemoryStore.updateMessages(threadId,messages);
         return new ChatResponse(
                 lastMessage.text(),
+                finalState.intentRecognition().orElse("OTHER"),
                 threadId
         );
     }
