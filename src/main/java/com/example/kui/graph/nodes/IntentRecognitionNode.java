@@ -3,6 +3,7 @@ package com.example.kui.graph.nodes;
 import com.example.kui.agents.IntentAgent;
 import com.example.kui.common.enums.PromptKey;
 import com.example.kui.graph.state.WorkflowState;
+import com.example.kui.util.ChatMessageUtil;
 import com.example.kui.util.PromptUtil;
 import dev.langchain4j.data.message.ChatMessage;
 import lombok.extern.slf4j.Slf4j;
@@ -24,12 +25,20 @@ public class IntentRecognitionNode implements NodeAction<WorkflowState> {
     @Autowired
     private PromptUtil promptUtil;
 
+    @Autowired
+    private ChatMessageUtil chatMessageUtil;
+
     @Override
     public Map<String, Object> apply(WorkflowState state) throws Exception {
         List<ChatMessage> messages = state.messages();
+        List<ChatMessage> escapedMessages = messages.stream()
+                .filter(msg -> msg instanceof ChatMessage)
+                .map(chatMessageUtil::escapeMessageContent)
+                .filter(msg -> msg != null)
+                .collect(Collectors.toList());
         String threadId = state.threadId()
                 .orElseThrow(() -> new IllegalStateException("threadId missing"));
-        String intent = intentAgent.chat(threadId,messages,promptUtil.getPrompt(PromptKey.INTENT_RECOGNIZE));
+        String intent = intentAgent.chat(threadId, escapedMessages, promptUtil.getPrompt(PromptKey.INTENT_RECOGNIZE));
         return Map.of(WorkflowState.INTENT_RECOGNITION_KEY, intent);
     }
 }
