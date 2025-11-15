@@ -9,6 +9,16 @@ import java.util.List;
 @Service
 public class ChatMessageUtil {
 
+    public String escapeStringContent(String content) {
+        if (content == null || content.isEmpty()) {
+            return content;
+        }
+        // Escape double curly braces to prevent template variable parsing
+        // In LangChain4j templates, {{ becomes {{{{ to escape it
+        // The template system should convert {{{{ back to {{ when rendering
+        return content.replace("{{", "{{{{").replace("}}", "}}}}");
+    }
+
     /**
      * Escapes curly braces in message content to prevent LangChain4j template parser errors.
      * Replaces {{ with {{{{ and }} with }}}}
