@@ -33,7 +33,6 @@ public class KnowledgeRetrievalNode implements NodeAction<WorkflowState> {
         String threadId = state.threadId()
                 .orElseThrow(() -> new IllegalStateException("threadId missing"));
         String userMessage = messages.get(messages.size()-1).toString();
-        // Escape curly braces in user message
         String escapedUserMessage = chatMessageUtil.escapeStringContent(userMessage);
         System.out.println("用户输入内容:"+userMessage);
         String aiMessage = knowledgeAgent.chat(threadId,escapedUserMessage,promptUtil.getPrompt(PromptKey.KNOWLEDGE_RETRIEVAL));

@@ -11,6 +11,7 @@ import org.bsc.langgraph4j.action.NodeAction;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -31,11 +32,8 @@ public class IntentRecognitionNode implements NodeAction<WorkflowState> {
     @Override
     public Map<String, Object> apply(WorkflowState state) throws Exception {
         List<ChatMessage> messages = state.messages();
-        List<ChatMessage> escapedMessages = messages.stream()
-                .filter(msg -> msg instanceof ChatMessage)
-                .map(chatMessageUtil::escapeMessageContent)
-                .filter(msg -> msg != null)
-                .toList();
+        String userMessage = messages.get(messages.size()-1).toString();
+        String escapedMessages = chatMessageUtil.escapeStringContent(userMessage);
         String threadId = state.threadId()
                 .orElseThrow(() -> new IllegalStateException("threadId missing"));
         String intent = intentAgent.chat(threadId, escapedMessages, promptUtil.getPrompt(PromptKey.INTENT_RECOGNIZE));

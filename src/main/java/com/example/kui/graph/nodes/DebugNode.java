@@ -29,15 +29,12 @@ public class DebugNode implements NodeAction<WorkflowState> {
 
     @Override
     public Map<String, Object> apply(WorkflowState state) throws Exception {
-        List<ChatMessage> allMessages = state.messages().stream()
-                .skip(Math.max(0,state.messages().size()-5))
-                .filter(msg -> msg instanceof ChatMessage)
-                .map(chatMessageUtil::escapeMessageContent)
-                .filter(msg -> msg != null)
-                .toList();
+        List<ChatMessage> messages = state.messages();
+        String userMessage = messages.get(messages.size() - 1).toString();
+        String escapedUserMessage = chatMessageUtil.escapeStringContent(userMessage);
         String threadId = state.threadId()
                 .orElseThrow(()->new IllegalStateException("threadId missing"));
-        String debugMessage = debugAgent.debug(threadId,allMessages,promptUtil.getPrompt(PromptKey.CODE_DEBUG));
+        String debugMessage = debugAgent.debug(threadId,escapedUserMessage,promptUtil.getPrompt(PromptKey.CODE_DEBUG));
         return Map.of(
                 "messages",debugMessage
         );

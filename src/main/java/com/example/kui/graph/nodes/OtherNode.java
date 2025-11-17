@@ -12,6 +12,7 @@ import org.bsc.langgraph4j.action.NodeAction;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
+import java.sql.Time;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -31,18 +32,13 @@ public class OtherNode implements NodeAction<WorkflowState> {
 
     @Override
     public Map<String, Object> apply(WorkflowState state) throws Exception {
-        List<ChatMessage> allMessages = state.messages().stream()
-                .skip(Math.max(0,state.messages().size()-5))
-                .filter(msg -> msg instanceof ChatMessage)
-                .map(chatMessageUtil::escapeMessageContent)
-                .filter(msg -> msg != null)
-                .toList();
+        List<ChatMessage> messages = state.messages();
         String threadId = state.threadId()
                 .orElseThrow(() -> new IllegalStateException("threadId missing"));
         System.out.println("other 节点："+threadId);
-        String userMessage = allMessages.get(allMessages.size() - 1).toString();
+        String userMessage = messages.get(messages.size() - 1).toString();
         System.out.println("用户输入内容:"+userMessage);
-        String aiMessage = agent.chat(threadId,allMessages,promptUtil.getPrompt(PromptKey.AI_CHAT));
+        String aiMessage = agent.chat(threadId,userMessage,promptUtil.getPrompt(PromptKey.AI_CHAT));
         return Map.of(
                 "messages",aiMessage
         );
