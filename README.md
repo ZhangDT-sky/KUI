@@ -1,5 +1,9 @@
 ## KuiCoding
 
+<p align="center">
+  <img src="./kui.png" alt="KuiCoding mascot sunflower" width="280">
+</p>
+
 KuiCoding 是一个基于 Spring Boot + LangChain4j + LangGraph4j 的多智能体代码助手。它将意图识别、代码生成/调试、知识检索与 Web 搜索串联成一个可编排的工作流，结合 Redis 会话记忆、PgVector 向量库与 Tavily Web 搜索，为开发者提供可扩展、可自定义的 AI 编程体验。
 
 ---
