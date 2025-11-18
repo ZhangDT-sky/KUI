@@ -14,6 +14,7 @@ import dev.langchain4j.rag.content.retriever.EmbeddingStoreContentRetriever;
 import dev.langchain4j.store.embedding.EmbeddingStore;
 import dev.langchain4j.store.embedding.EmbeddingStoreIngestor;
 import dev.langchain4j.store.embedding.pgvector.PgVectorEmbeddingStore;
+import dev.langchain4j.web.search.tavily.TavilyWebSearchEngine;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -38,6 +39,7 @@ public class AgentConfig {
     @Autowired
     private EmbeddingModel embeddingModel;
 
+    TavilyWebSearchEngine tavilyWebSearchEngine;
 
     // 添加配置属性
     @Value("${kui.content.auto-load-on-startup:false}")
@@ -179,8 +181,8 @@ public class AgentConfig {
         return EmbeddingStoreContentRetriever.builder()
                 .embeddingStore(pgVectorEmbeddingStore)
                 .embeddingModel(embeddingModel)
-                .minScore(0.0)  // 降低阈值，让更多相关结果通过
-                .maxResults(30)   // 增加返回结果数量，提高多样性（后续可能需要去重）
+                .minScore(0.3)
+                .maxResults(30)
                 .build();
     }
 }
