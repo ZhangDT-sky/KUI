@@ -182,8 +182,8 @@ logging.level:
 ### 2. 克隆 & 构建
 
 ```bash
-git clone https://github.com/<your-org>/kuicoding.git
-cd kuicoding
+git clone https://github.com/<your-org>/kui.git
+cd kui
 mvn clean package
 ```
 
