@@ -2,19 +2,19 @@ langchain4j:
   open-ai:
     chat-model:
       base-url: https://dashscope.aliyuncs.com/compatible-mode/v1
-      api-key: "sk-4d14608f5c5d40eb926fcd2f44258e20"
+      api-key: ${QWEN_API_KEY}
       model-name: qwen-plus
       log-responses: true
       log-requests: true
     streaming-chat-model:
       base-url: https://dashscope.aliyuncs.com/compatible-mode/v1
-      api-key: "sk-4d14608f5c5d40eb926fcd2f44258e20"
+      api-key: ${QWEN_API_KEY}
       model-name: qwen-plus
       log-responses: true
       log-requests: true
     embedding-model:
       base-url: https://dashscope.aliyuncs.com/compatible-mode/v1
-      api-key: "sk-02ee960a2cf445358d1aa2718b9fcde9"
+      api-key: ${EMBEDDING_API_KEY}
       model-name: text-embedding-v4
       log-requests: true
       log-responses: true
