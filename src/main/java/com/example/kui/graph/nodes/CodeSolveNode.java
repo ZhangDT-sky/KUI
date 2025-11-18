@@ -86,9 +86,8 @@ public class CodeSolveNode implements NodeAction<WorkflowState> {
         String verifyMessage = codeAgent.codeVerify(threadId,aiMessage,testMessage,promptUtil.getPrompt(PromptKey.CODE_VERIFY));
         // 返回 AiMessage 列表
         // MessagesState 会自动追加到现有消息列表
-        List<AiMessage> responseMessages = List.of(
-                AiMessage.from(verifyMessage),
-                AiMessage.from(aiMessage)
+        List<String> responseMessages = List.of(
+                verifyMessage, aiMessage
         );
 
         return Map.of("messages", responseMessages);

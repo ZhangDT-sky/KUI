@@ -2,10 +2,12 @@ package com.example.kui.graph.nodes;
 
 
 import com.example.kui.agents.OtherAgent;
+import com.example.kui.agents.WebSearchAgent;
 import com.example.kui.common.enums.PromptKey;
 import com.example.kui.graph.state.WorkflowState;
 import com.example.kui.util.ChatMessageUtil;
 import com.example.kui.util.PromptUtil;
+import dev.langchain4j.data.message.AiMessage;
 import dev.langchain4j.data.message.ChatMessage;
 import lombok.extern.slf4j.Slf4j;
 import org.bsc.langgraph4j.action.NodeAction;
@@ -28,6 +30,9 @@ public class OtherNode implements NodeAction<WorkflowState> {
     private PromptUtil promptUtil;
 
     @Autowired
+    private WebSearchAgent webSearchAgent;
+
+    @Autowired
     private ChatMessageUtil chatMessageUtil;
 
     @Override
@@ -35,12 +40,11 @@ public class OtherNode implements NodeAction<WorkflowState> {
         List<ChatMessage> messages = state.messages();
         String threadId = state.threadId()
                 .orElseThrow(() -> new IllegalStateException("threadId missing"));
-        System.out.println("other 节点："+threadId);
         String userMessage = messages.get(messages.size() - 1).toString();
-        System.out.println("用户输入内容:"+userMessage);
-        String aiMessage = agent.chat(threadId,userMessage,promptUtil.getPrompt(PromptKey.AI_CHAT));
+        String webSearch = "  网络检索结果： "+webSearchAgent.chat(threadId,userMessage);
+        String aiMessage = agent.chat(threadId,userMessage+webSearch,promptUtil.getPrompt(PromptKey.AI_CHAT));
         return Map.of(
-                "messages",aiMessage
+                "messages", aiMessage
         );
     }
 }
