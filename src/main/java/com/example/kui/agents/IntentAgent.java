@@ -20,5 +20,5 @@ import static dev.langchain4j.service.spring.AiServiceWiringMode.EXPLICIT;
 )
 public interface IntentAgent {
     @SystemMessage("{{systemPrompt}}")
-    String chat(@MemoryId String memoryId, @UserMessage List<ChatMessage> message, @V("systemPrompt") String prompt);
+    String chat(@MemoryId String memoryId, @UserMessage String message, @V("systemPrompt") String prompt);
 }

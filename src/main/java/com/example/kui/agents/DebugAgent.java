@@ -20,5 +20,5 @@ import static dev.langchain4j.service.spring.AiServiceWiringMode.EXPLICIT;
 )
 public interface DebugAgent {
     @SystemMessage("{{systemPrompt}}")
-    String debug(@MemoryId String memoryId, @UserMessage List<ChatMessage> message, @V("systemPrompt") String prompt);
+    String debug(@MemoryId String memoryId, @UserMessage String message, @V("systemPrompt") String prompt);
 }
