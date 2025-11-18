@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KUI Chat</title>
+    <style>
+        :root {
+            font-family: "Segoe UI", "PingFang SC", sans-serif;
+            color: #1f2933;
+            background: #f5f6f8;
+        }
+        body {
+            margin: 0;
+            height: 100vh;
+            display: flex;
+            background: #f5f6f8;
+        }
+        .app {
+            flex: 1;
+            display: flex;
+        }
+        .sidebar {
+            width: 280px;
+            background: #fff;
+            border-right: 1px solid #e5e7eb;
+            display: flex;
+            flex-direction: column;
+        }
+        .sidebar-header {
+            padding: 20px;
+            border-bottom: 1px solid #f1f2f4;
+        }
+        .brand {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 12px;
+        }
+        .new-chat-btn {
+            width: 100%;
+            padding: 10px;
+            border: 1px dashed #c7ced6;
+            border-radius: 8px;
+            background: #f8fafc;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s ease;
+        }
+        .new-chat-btn:hover {
+            background: #eef2ff;
+            border-color: #818cf8;
+            color: #4c51c6;
+        }
+        .history {
+            flex: 1;
+            overflow-y: auto;
+            padding: 12px 16px 16px;
+        }
+        .thread {
+            padding: 12px;
+            border-radius: 10px;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            transition: background 0.2s ease;
+        }
+        .thread.active {
+            background: #eef2ff;
+        }
+        .thread-title {
+            font-size: 15px;
+            font-weight: 600;
+            color: #1f2933;
+        }
+        .thread-preview {
+            font-size: 13px;
+            color: #6b7280;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .chat-pane {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+        .chat-header {
+            padding: 24px 28px 12px;
+            border-bottom: 1px solid #e5e7eb;
+            background: #fff;
+        }
+        .chat-header h1 {
+            margin: 0;
+            font-size: 22px;
+            font-weight: 600;
+        }
+        .chat-header p {
+            margin: 8px 0 0;
+            color: #6b7280;
+            font-size: 14px;
+        }
+        .messages {
+            flex: 1;
+            padding: 24px 28px 10px;
+            overflow-y: auto;
+        }
+        .message {
+            max-width: 75%;
+            padding: 12px 16px;
+            margin-bottom: 16px;
+            border-radius: 16px;
+            line-height: 1.5;
+            background: #fff;
+            box-shadow: 0 2px 6px rgba(15, 23, 42, 0.08);
+        }
+        .message.user {
+            margin-left: auto;
+            background: #4f46e5;
+            color: #fff;
+        }
+        .message.bot {
+            background: #fff;
+        }
+        .message-meta {
+            font-size: 12px;
+            color: #9ca3af;
+            margin-bottom: 4px;
+            display: block;
+        }
+        .composer {
+            padding: 16px 28px 24px;
+            background: #fff;
+            border-top: 1px solid #e5e7eb;
+        }
+        .composer form {
+            display: flex;
+            gap: 12px;
+        }
+        .composer textarea {
+            flex: 1;
+            resize: none;
+            border: 1px solid #d1d5db;
+            border-radius: 12px;
+            padding: 12px 14px;
+            font-size: 15px;
+            font-family: inherit;
+            min-height: 56px;
+            transition: border 0.2s ease;
+        }
+        .composer textarea:focus {
+            outline: none;
+            border-color: #4f46e5;
+        }
+        .composer button {
+            min-width: 96px;
+            border: none;
+            border-radius: 12px;
+            background: #4f46e5;
+            color: #fff;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: opacity 0.2s ease;
+        }
+        .composer button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        @media (max-width: 960px) {
+            .sidebar {
+                width: 220px;
+            }
+            .message {
+                max-width: 90%;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="app">
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <div class="brand">KUI Chat</div>
+            <button class="new-chat-btn" id="new-chat">+ 新对话</button>
+            <button class="new-chat-btn" id="feedback-btn" style="margin-top: 8px;">留言</button>
+        </div>
+        <div class="history" id="thread-list"></div>
+    </aside>
+    <main class="chat-pane">
+        <div class="chat-header">
+            <h1 id="chat-title">开始新的对话</h1>
+            <p id="chat-subtitle">像豆包一样简洁的对话体验</p>
+        </div>
+        <div class="messages" id="message-list"></div>
+        <div class="composer">
+            <form id="chat-form">
+                <textarea id="chat-input" placeholder="输入消息..." rows="2"></textarea>
+                <button type="submit" id="send-button">发送</button>
+            </form>
+        </div>
+    </main>
+</div>
+<script>
+    const state = {
+        threads: [],
+        activeThreadId: null
+    };
+
+    function createThread() {
+        const id = `local-${Date.now()}`;
+        state.threads.unshift({
+            id,
+            title: "新的对话",
+            threadId: null,
+            messages: []
+        });
+        state.activeThreadId = id;
+        renderThreads();
+        renderMessages();
+        focusInput();
+    }
+
+    function setActiveThread(id) {
+        state.activeThreadId = id;
+        renderThreads();
+        renderMessages();
+        focusInput();
+    }
+
+    function getActiveThread() {
+        return state.threads.find(t => t.id === state.activeThreadId);
+    }
+
+    function renderThreads() {
+        const list = document.getElementById("thread-list");
+        list.innerHTML = "";
+        if (!state.threads.length) {
+            const empty = document.createElement("div");
+            empty.style.color = "#9ca3af";
+            empty.style.fontSize = "14px";
+            empty.textContent = "暂无会话，点击上方按钮开始";
+            list.appendChild(empty);
+            return;
+        }
+        state.threads.forEach(thread => {
+            const item = document.createElement("div");
+            item.className = "thread" + (thread.id === state.activeThreadId ? " active" : "");
+            item.addEventListener("click", () => setActiveThread(thread.id));
+
+            const title = document.createElement("div");
+            title.className = "thread-title";
+            title.textContent = thread.title;
+
+            const preview = document.createElement("div");
+            preview.className = "thread-preview";
+            const lastMessage = thread.messages[thread.messages.length - 1];
+            preview.textContent = lastMessage?.content || "空会话";
+
+            item.append(title, preview);
+            list.appendChild(item);
+        });
+    }
+
+    function renderMessages() {
+        const container = document.getElementById("message-list");
+        const thread = getActiveThread();
+        container.innerHTML = "";
+
+        if (!thread) {
+            document.getElementById("chat-title").textContent = "开始新的对话";
+            document.getElementById("chat-subtitle").textContent = "像豆包一样简洁的对话体验";
+            return;
+        }
+
+        document.getElementById("chat-title").textContent = thread.title;
+        document.getElementById("chat-subtitle").textContent = thread.threadId ? `threadId: ${thread.threadId}` : "等待首次回复";
+
+        thread.messages.forEach(msg => {
+            const bubble = document.createElement("div");
+            bubble.className = `message ${msg.role}`;
+
+            if (msg.role === "bot" && msg.intent) {
+                const meta = document.createElement("span");
+                meta.className = "message-meta";
+                meta.textContent = `意图：${msg.intent}`;
+                bubble.appendChild(meta);
+            }
+
+            bubble.append(msg.content);
+            container.appendChild(bubble);
+        });
+
+        container.scrollTop = container.scrollHeight;
+    }
+
+    async function sendMessage(content) {
+        const thread = getActiveThread();
+        if (!thread) {
+            createThread();
+            return sendMessage(content);
+        }
+
+        thread.messages.push({ role: "user", content });
+        renderMessages();
+
+        setComposerDisabled(true);
+        try {
+            const response = await fetch("/kui/chat", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    messages: { content, role: "user" },
+                    threadId: thread.threadId
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error("服务暂时不可用");
+            }
+
+            const data = await response.json();
+            thread.threadId = data.threadId || thread.threadId;
+            thread.title = thread.messages[0]?.content.slice(0, 12) || "新的对话";
+            thread.messages.push({
+                role: "bot",
+                content: data.message || "(无内容)",
+                intent: data.intent
+            });
+            renderThreads();
+            renderMessages();
+        } catch (error) {
+            thread.messages.push({
+                role: "bot",
+                content: `请求失败：${error.message}`
+            });
+            renderMessages();
+        } finally {
+            setComposerDisabled(false);
+        }
+    }
+
+    function setComposerDisabled(disabled) {
+        document.getElementById("chat-input").disabled = disabled;
+        document.getElementById("send-button").disabled = disabled;
+    }
+
+    function focusInput() {
+        const input = document.getElementById("chat-input");
+        input.focus();
+    }
+
+    document.getElementById("new-chat").addEventListener("click", createThread);
+
+    document.getElementById("feedback-btn").addEventListener("click", async () => {
+        const input = document.getElementById("chat-input");
+        const text = input.value.trim();
+        if (!text) {
+            return;
+        }
+        try {
+            await fetch("/kui/liuyan", {
+                method: "POST",
+                headers: { "Content-Type": "text/plain;charset=UTF-8" },
+                body: text
+            });
+            alert("留言成功，感谢你的反馈！");
+            input.value = "";
+        } catch (e) {
+            alert("留言失败，请稍后再试");
+        }
+    });
+
+    document.getElementById("chat-form").addEventListener("submit", (event) => {
+        event.preventDefault();
+        const input = document.getElementById("chat-input");
+        const text = input.value.trim();
+        if (!text) {
+            return;
+        }
+        input.value = "";
+        sendMessage(text);
+    });
+
+    createThread();
+</script>
+</body>
+</html>
+
