@@ -20,17 +20,24 @@ public class PromptUtil {
 
     private final ResourceLoader resourceLoader;
 
-    private final Yaml yaml =  new Yaml();
-
     public PromptUtil(ResourceLoader resourceLoader) {
         this.resourceLoader = resourceLoader;
     }
 
     public String getPrompt(PromptKey promptKey) {
+        InputStream inputStream = null;
         try{
             Resource resource = resourceLoader.getResource("classpath:" + promptKey.getFile());
-            InputStream inputStream = resource.getInputStream();
+            inputStream = resource.getInputStream();
+
+            // 每次创建新实例，避免并发问题
+            Yaml yaml = new Yaml();
             Map<String,Object> data  = yaml.load(inputStream);
+
+            // 检查数据是否为空
+            if(data == null || data.isEmpty()){
+                throw new IllegalStateException("YAML文件为空或格式错误: " + promptKey.getFile());
+            }
 
             String[] keys = promptKey.getKey().split("\\.");
             Object value = data;
@@ -43,7 +50,14 @@ public class PromptUtil {
             }
             return value != null ? value.toString() : "";
         }catch (Exception e){
-            throw new RuntimeException(e);
+            throw new RuntimeException("加载Prompt失败: " + promptKey.getFile() + " -> " + promptKey.getKey(), e);
+        }finally {
+            // 确保关闭InputStream
+            if(inputStream != null){
+                try{
+                    inputStream.close();
+                }catch(Exception ignored){}
+            }
         }
     }
 }
