@@ -1,4 +1,4 @@
-package com.example.kui.agents;
+package com.example.kui.agents.core;
 
 import dev.langchain4j.service.MemoryId;
 import dev.langchain4j.service.SystemMessage;
