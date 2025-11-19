@@ -1,8 +1,5 @@
 package com.example.kui.controller;
-import com.example.kui.agents.CodeAgent;
-import com.example.kui.agents.IntentAgent;
-
-import com.example.kui.agents.WebSearchAgent;
+import com.example.kui.agents.core.*;
 import com.example.kui.common.dto.ChatRequest;
 import com.example.kui.common.dto.ChatResponse;
 import com.example.kui.graph.nodes.IntentRecognitionNode;
@@ -53,6 +50,8 @@ public class CodeController {
 
     private final WorkflowState workflowState = new WorkflowState(Map.of("messages",new ArrayList<>())) ;
 
+    private static final String COMMENT_HASH_KEY = "comment";
+
     @PostMapping("/chat")
     public ChatResponse chat(@RequestBody ChatRequest request) throws GraphStateException {
         return graphExecutionService.chat(request);
@@ -76,4 +75,12 @@ public class CodeController {
     public String webSearch(@RequestBody String userMessage) {
         return webSearchAgent.chat(userMessage);
     }
+
+    @GetMapping("/comment")
+    public Map<Object, Object> commentList(){
+        Map<Object, Object> map = redisTemplate.opsForHash().entries(COMMENT_HASH_KEY);
+        System.out.println(map.toString());
+        return map;
+    }
+
 }
