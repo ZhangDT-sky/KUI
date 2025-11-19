@@ -1,13 +1,12 @@
 package com.example.kui.graph.nodes;
 
-import com.example.kui.agents.CodeAgent;
+import com.example.kui.agents.core.CodeAgent;
 import com.example.kui.common.enums.PromptKey;
 import com.example.kui.graph.state.WorkflowState;
 import com.example.kui.memory.RedisChatMemoryStore;
 import com.example.kui.util.ChatMessageUtil;
 import com.example.kui.util.ExecutorUtil;
 import com.example.kui.util.PromptUtil;
-import dev.langchain4j.data.message.AiMessage;
 import dev.langchain4j.data.message.ChatMessage;
 import lombok.extern.slf4j.Slf4j;
 import org.bsc.langgraph4j.action.NodeAction;

@@ -1,6 +1,6 @@
 package com.example.kui.graph.nodes;
 
-import com.example.kui.agents.DebugAgent;
+import com.example.kui.agents.core.DebugAgent;
 import com.example.kui.common.enums.PromptKey;
 import com.example.kui.graph.state.WorkflowState;
 import com.example.kui.util.ChatMessageUtil;
@@ -13,7 +13,6 @@ import org.springframework.stereotype.Component;
 
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 @Slf4j
 @Component

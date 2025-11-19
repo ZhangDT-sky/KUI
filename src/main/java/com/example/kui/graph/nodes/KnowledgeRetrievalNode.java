@@ -1,6 +1,6 @@
 package com.example.kui.graph.nodes;
 
-import com.example.kui.agents.KnowledgeAgent;
+import com.example.kui.agents.core.KnowledgeAgent;
 import com.example.kui.common.enums.PromptKey;
 import com.example.kui.graph.state.WorkflowState;
 import com.example.kui.util.ChatMessageUtil;

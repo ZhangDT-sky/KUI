@@ -1,6 +1,6 @@
 package com.example.kui.graph.nodes;
 
-import com.example.kui.agents.IntentAgent;
+import com.example.kui.agents.core.IntentAgent;
 import com.example.kui.common.enums.PromptKey;
 import com.example.kui.graph.state.WorkflowState;
 import com.example.kui.util.ChatMessageUtil;
@@ -11,10 +11,8 @@ import org.bsc.langgraph4j.action.NodeAction;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 @Slf4j
 @Component
