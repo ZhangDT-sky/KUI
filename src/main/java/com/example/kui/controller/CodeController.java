@@ -1,8 +1,8 @@
 package com.example.kui.controller;
-import com.example.kui.agents.core.CodeAgent;
-import com.example.kui.agents.core.IntentAgent;
+import com.example.kui.agents.CodeAgent;
+import com.example.kui.agents.IntentAgent;
 
-import com.example.kui.agents.core.WebSearchAgent;
+import com.example.kui.agents.WebSearchAgent;
 import com.example.kui.common.dto.ChatRequest;
 import com.example.kui.common.dto.ChatResponse;
 import com.example.kui.graph.nodes.IntentRecognitionNode;
@@ -11,8 +11,11 @@ import com.example.kui.graph.workflows.MainWorkflowGraph;
 import com.example.kui.services.GraphExecutionService;
 import com.example.kui.util.PromptUtil;
 
+import dev.langchain4j.data.message.AiMessage;
+import dev.langchain4j.data.message.ChatMessage;
 import dev.langchain4j.data.message.UserMessage;
 import org.bsc.langgraph4j.GraphStateException;
+import org.bsc.langgraph4j.RunnableConfig;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.web.bind.annotation.*;
