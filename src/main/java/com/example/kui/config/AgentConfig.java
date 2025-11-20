@@ -181,8 +181,8 @@ public class AgentConfig {
         return EmbeddingStoreContentRetriever.builder()
                 .embeddingStore(pgVectorEmbeddingStore)
                 .embeddingModel(embeddingModel)
-                .minScore(0.3)
-                .maxResults(30)
+                .minScore(0.5)
+                .maxResults(10)
                 .build();
     }
 }

@@ -34,6 +34,9 @@ public class MainWorkflowGraph {
     private OtherNode otherNode;
 
     @Autowired
+    private TextualNormsNode textualNormsNode;
+
+    @Autowired
     private KnowledgeRetrievalNode knowledgeRetrievalNode;
 
     private CompiledGraph<WorkflowState> compiledGraph;
@@ -53,6 +56,7 @@ public class MainWorkflowGraph {
                     .addNode("OtherNode", node_async(otherNode))
                     .addNode("KnowledgeRetrievalNode",node_async(knowledgeRetrievalNode))
                     .addNode("DebugNode",node_async(debugNode))
+                    .addNode("TextualNormsNode",node_async(textualNormsNode))
                     .addEdge(START,"IntentRecognitionNode")
                     .addConditionalEdges("IntentRecognitionNode",
                             edge_async(state->{
@@ -79,11 +83,11 @@ public class MainWorkflowGraph {
                                 "DebugNode","DebugNode"
                             )
                     )
-                    .addEdge("DebugNode",END)
-                    .addEdge("CodeSolveNode",END)
-                    .addEdge("KnowledgeRetrievalNode",END)
-                    .addEdge("OtherNode",END);
-//                    .addEdge("IntentRecognitionNode",END);
+                    .addEdge("DebugNode","TextualNormsNode")
+                    .addEdge("CodeSolveNode","TextualNormsNode")
+                    .addEdge("KnowledgeRetrievalNode","TextualNormsNode")
+                    .addEdge("OtherNode","TextualNormsNode")
+                    .addEdge("TextualNormsNode",END);
             var checkPointSaver = new MemorySaver();
             var config = CompileConfig.builder()
                     .checkpointSaver(checkPointSaver)

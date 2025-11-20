@@ -12,6 +12,7 @@ public enum PromptKey {
     AI_CHAT("prompt/other-agent.yml","prompts.ai-chat.system"),
     INTENT_RECOGNIZE("prompt/intent-agent.yml", "prompts.recognize-intent.system"),
     CODE_DEBUG("prompt/debug-agent.yml","prompts.code-debug.system"),
+    TEXTUAL_NORMS("prompt/text-agent.yml","prompts.textual-norm.system"),
     KNOWLEDGE_RETRIEVAL("prompt/knowledge-agent.yml","prompts.knowledge-retrieval.system");
 
     private final String file;
