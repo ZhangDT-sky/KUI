@@ -128,4 +128,9 @@ public class MainWorkflowGraph {
         var state = getCompiledGraph().invoke(initialState, config);
         return Optional.ofNullable(state.get());
     }
+
+    public AsyncGenerator<NodeOutput<WorkflowState>> stream(Map<String, Object> initialState,
+                                                            RunnableConfig config) throws GraphStateException {
+        return getCompiledGraph().stream(initialState, config);
+    }
 }

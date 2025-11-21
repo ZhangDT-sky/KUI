@@ -5,6 +5,7 @@ import com.example.kui.common.enums.PromptKey;
 import com.example.kui.graph.state.WorkflowState;
 import com.example.kui.util.ChatMessageUtil;
 import com.example.kui.util.PromptUtil;
+import dev.langchain4j.data.message.AiMessage;
 import dev.langchain4j.data.message.ChatMessage;
 import lombok.extern.slf4j.Slf4j;
 import org.bsc.langgraph4j.action.NodeAction;
@@ -35,7 +36,7 @@ public class DebugNode implements NodeAction<WorkflowState> {
                 .orElseThrow(()->new IllegalStateException("threadId missing"));
         String debugMessage = debugAgent.debug(threadId,escapedUserMessage,promptUtil.getPrompt(PromptKey.CODE_DEBUG));
         return Map.of(
-                "messages",debugMessage
+                "messages", List.of(AiMessage.from(debugMessage))
         );
     }
 }

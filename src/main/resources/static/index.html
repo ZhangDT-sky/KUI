@@ -80,10 +80,14 @@
             overflow: hidden;
             text-overflow: ellipsis;
         }
-        .chat-pane {
+        .chat-pane,
+        .comment-pane {
             flex: 1;
             display: flex;
             flex-direction: column;
+        }
+        .comment-pane {
+            background: #f5f6f8;
         }
         .chat-header {
             padding: 24px 28px 12px;
@@ -100,19 +104,81 @@
             color: #6b7280;
             font-size: 14px;
         }
+        .comment-header {
+            padding: 24px 28px;
+            background: #fff;
+            border-bottom: 1px solid #e5e7eb;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .comment-header h1 {
+            margin: 0;
+            font-size: 22px;
+        }
+        .comment-header button {
+            border: none;
+            background: #e5e7eb;
+            color: #1f2933;
+            border-radius: 10px;
+            padding: 8px 16px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .comment-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px 28px 40px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+        .comment-card {
+            background: #fff;
+            padding: 16px 20px;
+            border-radius: 16px;
+            box-shadow: 0 2px 6px rgba(15, 23, 42, 0.08);
+        }
+        .comment-card h3 {
+            margin: 0 0 6px;
+            font-size: 15px;
+            color: #4f46e5;
+        }
+        .comment-card p {
+            margin: 0;
+            font-size: 15px;
+            color: #374151;
+            line-height: 1.5;
+        }
+        .comment-empty {
+            color: #9ca3af;
+            text-align: center;
+            margin-top: 60px;
+        }
         .messages {
             flex: 1;
             padding: 24px 28px 10px;
             overflow-y: auto;
         }
+        .message-row {
+            display: flex;
+            margin-bottom: 16px;
+        }
+        .message-row.user {
+            justify-content: flex-end;
+        }
+        .message-row.bot {
+            justify-content: flex-start;
+        }
         .message {
             max-width: 75%;
             padding: 12px 16px;
-            margin-bottom: 16px;
             border-radius: 16px;
             line-height: 1.5;
             background: #fff;
             box-shadow: 0 2px 6px rgba(15, 23, 42, 0.08);
+            white-space: pre-wrap;
+            word-break: break-word;
         }
         .message.user {
             margin-left: auto;
@@ -183,11 +249,11 @@
         <div class="sidebar-header">
             <div class="brand">KUI Chat</div>
             <button class="new-chat-btn" id="new-chat">+ 新对话</button>
-            <button class="new-chat-btn" id="feedback-btn" style="margin-top: 8px;">留言</button>
+            <button class="new-chat-btn" id="feedback-btn" style="margin-top: 8px;">留言区（点击即可查看留言）</button>
         </div>
         <div class="history" id="thread-list"></div>
     </aside>
-    <main class="chat-pane">
+    <main class="chat-pane" id="chat-pane">
         <div class="chat-header">
             <h1 id="chat-title">开始新的对话</h1>
             <p id="chat-subtitle">像豆包一样简洁的对话体验</p>
@@ -200,12 +266,29 @@
             </form>
         </div>
     </main>
+    <section class="comment-pane" id="comment-pane" style="display:none;">
+        <div class="comment-header">
+            <div>
+                <h1>留言区</h1>
+                <p style="margin:8px 0 0;color:#6b7280;font-size:14px;">大家的留言都会展示在这里</p>
+            </div>
+            <div>
+                <button id="refresh-comments" style="margin-right:8px;">刷新</button>
+                <button id="back-to-chat">返回对话</button>
+            </div>
+        </div>
+        <div class="comment-list" id="comment-list"></div>
+    </section>
 </div>
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 <script>
     const state = {
         threads: [],
-        activeThreadId: null
+        activeThreadId: null,
+        view: "chat"
     };
+    const FINAL_STREAM_NODE = "TextualNormsNode";
+    const TYPEWRITER_INTERVAL = 20; // ms per character
 
     function createThread() {
         const id = `local-${Date.now()}`;
@@ -213,7 +296,9 @@
             id,
             title: "新的对话",
             threadId: null,
-            messages: []
+            messages: [],
+            lastStreamHadContent: false,
+            lastStreamCompleted: false
         });
         state.activeThreadId = id;
         renderThreads();
@@ -277,8 +362,18 @@
         document.getElementById("chat-subtitle").textContent = thread.threadId ? `threadId: ${thread.threadId}` : "等待首次回复";
 
         thread.messages.forEach(msg => {
+            const row = document.createElement("div");
+            row.className = `message-row ${msg.role}`;
+
             const bubble = document.createElement("div");
             bubble.className = `message ${msg.role}`;
+
+            if (msg.stage) {
+                const stageLabel = document.createElement("span");
+                stageLabel.className = "message-meta";
+                stageLabel.textContent = `节点：${msg.stage}`;
+                bubble.appendChild(stageLabel);
+            }
 
             if (msg.role === "bot" && msg.intent) {
                 const meta = document.createElement("span");
@@ -287,8 +382,15 @@
                 bubble.appendChild(meta);
             }
 
-            bubble.append(msg.content);
-            container.appendChild(bubble);
+            const content = document.createElement("div");
+            if (msg.role === "bot" && msg.isMarkdown && window.marked) {
+                content.innerHTML = marked.parse(msg.content || "");
+            } else {
+                content.textContent = msg.content;
+            }
+            bubble.append(content);
+            row.appendChild(bubble);
+            container.appendChild(row);
         });
 
         container.scrollTop = container.scrollHeight;
@@ -301,43 +403,187 @@
             return sendMessage(content);
         }
 
+        thread.lastStreamHadContent = false;
+        thread.lastStreamCompleted = false;
         thread.messages.push({ role: "user", content });
         renderMessages();
 
         setComposerDisabled(true);
         try {
-            const response = await fetch("/kui/chat", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    messages: { content, role: "user" },
-                    threadId: thread.threadId
-                })
-            });
-
-            if (!response.ok) {
-                throw new Error("服务暂时不可用");
-            }
-
-            const data = await response.json();
-            thread.threadId = data.threadId || thread.threadId;
+            await streamWorkflow(thread, content);
             thread.title = thread.messages[0]?.content.slice(0, 12) || "新的对话";
-            thread.messages.push({
-                role: "bot",
-                content: data.message || "(无内容)",
-                intent: data.intent
-            });
+        } catch (error) {
+            if (!thread.lastStreamHadContent) {
+                thread.messages.push({
+                    role: "bot",
+                    content: `请求失败：${error.message}`
+                });
+            } else {
+                console.warn("Stream finished with client-side error after delivering content", error);
+            }
+        } finally {
             renderThreads();
             renderMessages();
-        } catch (error) {
-            thread.messages.push({
-                role: "bot",
-                content: `请求失败：${error.message}`
-            });
-            renderMessages();
-        } finally {
             setComposerDisabled(false);
         }
+    }
+
+    async function streamWorkflow(thread, content) {
+        const response = await fetch("/stream/api/workflow", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Accept": "application/x-ndjson"
+            },
+            body: JSON.stringify({
+                messages: { content, role: "user" },
+                threadId: thread.threadId
+            })
+        });
+
+        if (!response.ok) {
+            const text = await response.text().catch(() => "");
+            throw new Error(text || "服务暂时不可用");
+        }
+
+        if (!response.body || !response.body.getReader) {
+            throw new Error("当前浏览器不支持流式响应");
+        }
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = "";
+
+        while (true) {
+            const { value, done } = await reader.read();
+            if (done) {
+                break;
+            }
+            buffer += decoder.decode(value, { stream: true });
+            buffer = processNdjsonBuffer(buffer, chunk => handleStreamChunk(thread, chunk));
+        }
+
+        if (buffer.trim()) {
+            processNdjsonBuffer(buffer + "\n", chunk => handleStreamChunk(thread, chunk));
+        }
+    }
+
+    function processNdjsonBuffer(buffer, onChunk) {
+        const lines = buffer.split("\n");
+        const rest = lines.pop() ?? "";
+        lines.forEach(line => {
+            const trimmed = line.trim();
+            if (!trimmed) {
+                return;
+            }
+            try {
+                const chunk = JSON.parse(trimmed);
+                onChunk(chunk);
+            } catch (error) {
+                console.error("解析流式数据失败", error);
+            }
+        });
+        return rest;
+    }
+
+    function handleStreamChunk(thread, chunk) {
+        if (!chunk) {
+            return;
+        }
+        const chunkIsMarkdown = Boolean(chunk.isMarkdown);
+        if (!thread.threadId && chunk.threadId) {
+            thread.threadId = chunk.threadId;
+            renderThreads();
+        }
+
+        if (chunk.error) {
+            thread.messages.push({
+                role: "bot",
+                content: chunk.error,
+                stage: "error",
+                isMarkdown: false
+            });
+            renderMessages();
+            return;
+        }
+
+        const stage = chunk.stage || chunk.node;
+        if (stage !== FINAL_STREAM_NODE) {
+            return;
+        }
+        if (!chunk.content) {
+            return;
+        }
+
+        thread.lastStreamHadContent = true;
+        if (chunk.end) {
+            thread.lastStreamCompleted = true;
+        }
+        let message = findLastMessageByStage(thread.messages, stage);
+        if (!message || !message.streaming) {
+            message = {
+                role: "bot",
+                content: "",
+                fullContent: chunk.content,
+                intent: chunk.intent,
+                stage,
+                streaming: true,
+                displayIndex: 0,
+                animationHandle: null,
+                isMarkdown: chunkIsMarkdown
+            };
+            thread.messages.push(message);
+            startTypewriterAnimation(message);
+        } else {
+            message.fullContent = chunk.content;
+            message.intent = chunk.intent ?? message.intent;
+            if (chunk.isMarkdown !== undefined) {
+                message.isMarkdown = chunkIsMarkdown;
+            }
+            if (!message.animationHandle) {
+                startTypewriterAnimation(message);
+            }
+        }
+
+        if (chunk.end) {
+            message.streaming = false;
+        }
+        renderMessages();
+    }
+
+    function findLastMessageByStage(messages, stage) {
+        for (let i = messages.length - 1; i >= 0; i--) {
+            if (messages[i].stage === stage) {
+                return messages[i];
+            }
+        }
+        return null;
+    }
+
+    function startTypewriterAnimation(message) {
+        if (!message) {
+            return;
+        }
+        message.displayIndex = message.displayIndex || 0;
+        if (message.animationHandle) {
+            clearTimeout(message.animationHandle);
+        }
+
+        const step = () => {
+            const text = message.fullContent || "";
+            if (message.displayIndex < text.length) {
+                message.displayIndex += 1;
+                message.content = text.slice(0, message.displayIndex);
+                renderMessages();
+                message.animationHandle = setTimeout(step, TYPEWRITER_INTERVAL);
+            } else {
+                message.content = text;
+                message.streaming = false;
+                message.animationHandle = null;
+                renderMessages();
+            }
+        };
+        step();
     }
 
     function setComposerDisabled(disabled) {
@@ -352,24 +598,51 @@
 
     document.getElementById("new-chat").addEventListener("click", createThread);
 
-    document.getElementById("feedback-btn").addEventListener("click", async () => {
-        const input = document.getElementById("chat-input");
-        const text = input.value.trim();
-        if (!text) {
+    document.getElementById("feedback-btn").addEventListener("click", () => {
+        state.view = "comments";
+        document.getElementById("chat-pane").style.display = "none";
+        document.getElementById("comment-pane").style.display = "flex";
+        document.getElementById("comment-list").innerHTML = "<div class='comment-empty'>加载中...</div>";
+        fetchComments();
+    });
+
+    document.getElementById("back-to-chat").addEventListener("click", () => {
+        state.view = "chat";
+        document.getElementById("comment-pane").style.display = "none";
+        document.getElementById("chat-pane").style.display = "flex";
+    });
+
+    document.getElementById("refresh-comments").addEventListener("click", fetchComments);
+
+    async function fetchComments() {
+        try {
+            const response = await fetch("/kui/comment");
+            const data = await response.json();
+            renderComments(data);
+        } catch (error) {
+            document.getElementById("comment-list").innerHTML = "<div class='comment-empty'>获取留言失败，请稍后再试</div>";
+        }
+    }
+
+    function renderComments(data) {
+        const container = document.getElementById("comment-list");
+        container.innerHTML = "";
+        const entries = Object.entries(data || {});
+        if (!entries.length) {
+            container.innerHTML = "<div class='comment-empty'>暂无留言，快来留下第一条吧</div>";
             return;
         }
-        try {
-            await fetch("/kui/liuyan", {
-                method: "POST",
-                headers: { "Content-Type": "text/plain;charset=UTF-8" },
-                body: text
-            });
-            alert("留言成功，感谢你的反馈！");
-            input.value = "";
-        } catch (e) {
-            alert("留言失败，请稍后再试");
-        }
-    });
+        entries.forEach(([id, message]) => {
+            const card = document.createElement("div");
+            card.className = "comment-card";
+            const title = document.createElement("h3");
+            title.textContent = id || "匿名";
+            const content = document.createElement("p");
+            content.textContent = message;
+            card.append(title, content);
+            container.appendChild(card);
+        });
+    }
 
     document.getElementById("chat-form").addEventListener("submit", (event) => {
         event.preventDefault();

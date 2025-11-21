@@ -7,6 +7,7 @@ import com.example.kui.common.enums.PromptKey;
 import com.example.kui.graph.state.WorkflowState;
 import com.example.kui.util.ChatMessageUtil;
 import com.example.kui.util.PromptUtil;
+import dev.langchain4j.data.message.AiMessage;
 import dev.langchain4j.data.message.ChatMessage;
 import lombok.extern.slf4j.Slf4j;
 import org.bsc.langgraph4j.action.NodeAction;
@@ -38,10 +39,24 @@ public class OtherNode implements NodeAction<WorkflowState> {
         String threadId = state.threadId()
                 .orElseThrow(() -> new IllegalStateException("threadId missing"));
         String userMessage = messages.get(messages.size() - 1).toString();
-        String webSearch = "  网络检索结果： " + webSearchAgent.chat(threadId,userMessage);
-        String aiMessage = agent.chat(threadId,userMessage+webSearch,promptUtil.getPrompt(PromptKey.AI_CHAT));
+
+//        String searchQuery = truncateForWebSearch(userMessage);
+//        String webSearch = "  网络检索结果： " + webSearchAgent.chat(threadId, searchQuery);
+        String aiMessage = agent.chat(threadId,userMessage,promptUtil.getPrompt(PromptKey.AI_CHAT));
         return Map.of(
-                "messages", aiMessage
+                "messages", List.of(AiMessage.from(aiMessage))
         );
+    }
+
+    private String truncateForWebSearch(String message) {
+        if (message == null) {
+            return "";
+        }
+        int maxLength = 380; // Tavily limit is 400, keep some buffer for prompt wrappers
+        if (message.length() <= maxLength) {
+            return message;
+        }
+        log.warn("Web search query too long ({} chars). Truncating to {}.", message.length(), maxLength);
+        return message.substring(0, maxLength);
     }
 }

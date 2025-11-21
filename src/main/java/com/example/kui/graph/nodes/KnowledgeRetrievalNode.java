@@ -5,6 +5,7 @@ import com.example.kui.common.enums.PromptKey;
 import com.example.kui.graph.state.WorkflowState;
 import com.example.kui.util.ChatMessageUtil;
 import com.example.kui.util.PromptUtil;
+import dev.langchain4j.data.message.AiMessage;
 import dev.langchain4j.data.message.ChatMessage;
 import lombok.extern.slf4j.Slf4j;
 import org.bsc.langgraph4j.action.NodeAction;
@@ -37,7 +38,7 @@ public class KnowledgeRetrievalNode implements NodeAction<WorkflowState> {
         System.out.println("用户输入内容:"+userMessage);
         String aiMessage = knowledgeAgent.chat(threadId,escapedUserMessage,promptUtil.getPrompt(PromptKey.KNOWLEDGE_RETRIEVAL));
         return Map.of(
-                "messages",aiMessage
+                "messages",List.of(AiMessage.from(aiMessage))
         );
     }
 }

@@ -7,6 +7,7 @@ import com.example.kui.memory.RedisChatMemoryStore;
 import com.example.kui.util.ChatMessageUtil;
 import com.example.kui.util.ExecutorUtil;
 import com.example.kui.util.PromptUtil;
+import dev.langchain4j.data.message.AiMessage;
 import dev.langchain4j.data.message.ChatMessage;
 import lombok.extern.slf4j.Slf4j;
 import org.bsc.langgraph4j.action.NodeAction;
@@ -85,8 +86,9 @@ public class CodeSolveNode implements NodeAction<WorkflowState> {
         String verifyMessage = codeAgent.codeVerify(threadId,aiMessage,testMessage,promptUtil.getPrompt(PromptKey.CODE_VERIFY));
         // 返回 AiMessage 列表
         // MessagesState 会自动追加到现有消息列表
-        List<String> responseMessages = List.of(
-                verifyMessage, aiMessage
+        List<AiMessage> responseMessages = List.of(
+                AiMessage.from(verifyMessage),
+                AiMessage.from(aiMessage)
         );
 
         return Map.of("messages", responseMessages);
