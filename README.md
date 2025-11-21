@@ -12,12 +12,13 @@ KuiCoding 是一个基于 Spring Boot + LangChain4j + LangGraph4j 的多智能�
 
 - 多智能体编排：Intent、Code、Debug、Knowledge、Other、WebSearch 等 Agent 由 LangGraph4j 串联，自动路由用户意图
 - LangChain4j 深度集成：统一管理大模型、流式输出、Chat Memory、RAG ContentRetriever
+- **流式输出支持**：通过 `WorkflowService` 和 `TextualNormsNode` 实现实时流式响应，前端可实时接收 AI 生成内容
 - Redis 会话记忆：通过自定义 `RedisChatMemoryStore` 持久化多轮对话上下文
 - PgVector RAG：把 `src/main/resources/content` 内资料嵌入 PostgreSQL + pgvector，支持检索式回答
 - 自动生成/验证代码：`CodeSolveNode` 同步生成测试用例、代码草案与验证报告
 - Tavily Web 搜索：`OtherNode` 联合网络检索回答开放问题
 - 可配置提示词：所有系统 Prompt 以 YAML 形式存放在 `src/main/resources/prompt`，支持热切换
-- REST API：`/kui/chat` 以 JSON 发送消息，返回结构化意图和回复
+- REST API：`/kui/chat` 以 JSON 发送消息，返回结构化意图和回复；`/stream/api/workflow` 支持流式输出
 - 可扩展工作流：新增节点、 Agent 或数据源时只需在 Graph 中注册即可
 
 ---
@@ -42,7 +43,12 @@ KUI/
 │   │   │   │   ├── state/WorkflowState.java    # 状态定义
 │   │   │   │   └── workflows/MainWorkflowGraph # 编排入口
 │   │   │   ├── memory/RedisChatMemoryStore.java
-│   │   │   ├── services/GraphExecutionService.java
+│   │   │   ├── services/                       # 工作流执行服务
+│   │   │   │   ├── GraphExecutionService.java
+│   │   │   │   └── WorkflowService.java        # 流式输出服务
+│   │   │   ├── streaming/                      # 流式输出模块
+│   │   │   │   ├── WorkflowStreamObserver.java # 流式更新观察者接口
+│   │   │   │   └── WorkflowStreamRegistry.java  # 观察者注册表
 │   │   │   └── util/                           # Prompt/消息/线程池工具
 │   │   └── resources/
 │   │       ├── application.yml                 # 核心配置
@@ -66,20 +72,26 @@ KUI/
 
 - `graph/`  
   - `state/WorkflowState`：扩展 `MessagesState`，记录 `messages`、`threadId`、`intentRecognition`。  
-  - `workflows/MainWorkflowGraph`：使用 LangGraph4j 构建状态图，从 `IntentRecognitionNode` 出发路由到 `CodeSolveNode` / `KnowledgeRetrievalNode` / `DebugNode` / `OtherNode`。  
-  - `nodes/*`：每个节点对应一个业务 Agent，并负责构造输入/输出。
+  - `workflows/MainWorkflowGraph`：使用 LangGraph4j 构建状态图，从 `IntentRecognitionNode` 出发路由到 `CodeSolveNode` / `KnowledgeRetrievalNode` / `DebugNode` / `OtherNode`，最终汇聚到 `TextualNormsNode` 进行文本规范化。  
+  - `nodes/*`：每个节点对应一个业务 Agent，并负责构造输入/输出。`TextualNormsNode` 负责流式生成最终回复。
 
 - `memory/RedisChatMemoryStore`  
   实现 `ChatMemoryStore` 接口，将消息序列化存储到 Redis，支持多线程 ID 以及派生 memory (例如 `thread-test` / `thread-chat`)。
 
-- `services/GraphExecutionService`  
-  接收 `ChatRequest`，组装初始 `WorkflowState` 并运行工作流，返回 `ChatResponse`（包含最终回复、识别意图、线程 ID）。
+- `services/`  
+  - `GraphExecutionService`：接收 `ChatRequest`，组装初始 `WorkflowState` 并运行工作流，返回 `ChatResponse`（包含最终回复、识别意图、线程 ID）。  
+  - `WorkflowService`：提供流式输出功能，通过 `ResponseBodyEmitter` 实现实时推送，注册 `WorkflowStreamObserver` 接收 `TextualNormsNode` 的流式更新。
 
-- `controller/CodeController`  
-  暴露 REST API：`/kui/chat`、`/kui/liuyan`（访客留言存 Redis）、`/kui/search`（直接调用 Web 搜索 Agent）。
+- `streaming/`  
+  - `WorkflowStreamObserver`：流式更新观察者接口，定义 `onTextualUpdate(content, intent, end)` 方法。  
+  - `WorkflowStreamRegistry`：线程安全的观察者注册表，以 `threadId` 为键管理多个会话的观察者。
+
+- `controller/`  
+  - `CodeController`：暴露 REST API：`/kui/chat`、`/kui/liuyan`（访客留言存 Redis）、`/kui/search`（直接调用 Web 搜索 Agent）。  
+  - `WorkflowController`：暴露流式 API：`/stream/api/workflow`，返回 `application/x-ndjson` 格式的流式响应。
 
 - `common/dto`  
-  定义 `ChatRequest`（包含单条 `messages` 与 `threadId`）与 `ChatResponse`。
+  定义 `ChatRequest`（包含单条 `messages` 与 `threadId`）、`ChatResponse` 与 `WorkflowStreamChunk`（流式输出数据块，包含 stage、content、intent、threadId、end 等字段）。
 
 - `util/`  
   - `PromptUtil`：按 `PromptKey` 载入 YAML 片段。  
@@ -94,24 +106,60 @@ KUI/
 
 ## 🌐 多智能体工作流
 
+### 工作流图
+
+```mermaid
+flowchart TD
+    %% 核心节点
+    Start([start]) --> IntentRecognition{IntentRecognition}
+    
+    %% start到websearch是实线
+    Start --> WebSearch[WebSearch<br/>（可选）]
+    
+    %% intentrecognition到其他节点的虚线连接
+    IntentRecognition -.-> CodeSolve[CodeSolve]
+    IntentRecognition -.-> CodeDebug[CodeDebug]
+    IntentRecognition -.-> KnowledgeRetrieval[KnowledgeRetrieval]
+    IntentRecognition -.-> Other[Other]
+    
+    %% 所有节点汇聚到文本规范化
+    WebSearch --> TextNorms[TextNorms]
+    CodeSolve --> TextNorms
+    CodeDebug --> TextNorms
+    KnowledgeRetrieval --> TextNorms
+    Other --> TextNorms
+    
+    %% 结束流程
+    TextNorms --> End([end])
+    
+    %% 样式设置
+    style Start fill:#E3F2FD,stroke:#1976D2,stroke-width:2px
+    style End fill:#E3F2FD,stroke:#1976D2,stroke-width:2px
+    style IntentRecognition fill:#BBDEFB,stroke:#1565C0,stroke-width:2px
+    style TextNorms fill:#E8F5E8,stroke:#2E7D32,stroke-width:2px
+    style WebSearch fill:#FFF3E0,stroke:#EF6C00,stroke-width:2px
+    style CodeSolve fill:#F3E5F5,stroke:#7B1FA2,stroke-width:2px
+    style CodeDebug fill:#F3E5F5,stroke:#7B1FA2,stroke-width:2px
+    style KnowledgeRetrieval fill:#F3E5F5,stroke:#7B1FA2,stroke-width:2px
+    style Other fill:#F3E5F5,stroke:#7B1FA2,stroke-width:2px
 ```
-User → IntentRecognitionNode → (PROBLEM_SOLVING → CodeSolveNode)
-                                  (CODE_DEBUGGING → DebugNode)
-                                  (TEMPLATE_RECOMMENDATION → KnowledgeRetrievalNode)
-                                  (OTHER → OtherNode → WebSearchAgent)
-                                 → END
-```
+
+### 节点说明
 
 - **IntentRecognitionNode**：调用 `IntentAgent`，依据 `prompt/intent-agent.yml` 输出 `PROBLEM_SOLVING / CODE_DEBUGGING / TEMPLATE_RECOMMENDATION / OTHER`。
 - **CodeSolveNode**：同一用户问题分别喂给 `CodeAgent.chat` 与 `CodeAgent.testCases`，生成候选答案与测试用例；随后通过 `codeVerify` 合并最终回复，保障可执行性。
 - **DebugNode**：面向报错/日志场景，输出问题定位 + 修复建议。
 - **KnowledgeRetrievalNode**：利用 `KnowledgeAgent` + `EmbeddingStoreContentRetriever`（PgVector）提供模板/知识推荐。
 - **OtherNode**：先调用 `WebSearchAgent` 获取 Tavily 检索结果，再交给 `OtherAgent` 结合本地历史输出自然回答。
+- **TextualNormsNode**：所有业务节点的输出最终汇聚到此节点，通过流式大模型生成规范化文本，并通过 `WorkflowStreamObserver` 实时推送到前端。
+
+### 扩展工作流
 
 如需新增节点，可：
 1. 在 `graph/nodes` 新增 `NodeAction`；  
 2. 注入对应 Agent/资源；  
-3. 在 `MainWorkflowGraph` 中注册节点与路由条件。
+3. 在 `MainWorkflowGraph` 中注册节点与路由条件；  
+4. 确保新节点输出连接到 `TextualNormsNode` 以支持流式输出。
 
 ---
 
@@ -218,7 +266,7 @@ mvn spring-boot:run
 java -jar target/KUI-0.0.1-SNAPSHOT.jar
 ```
 
-启动后访问 `POST http://localhost:8080/kui/chat`。
+启动后访问 `POST http://localhost:8080/kui/chat` 或 `POST http://localhost:8080/stream/api/workflow`。
 
 ---
 
@@ -255,9 +303,92 @@ java -jar target/KUI-0.0.1-SNAPSHOT.jar
 
 - 直接触发 `WebSearchAgent`，返回 Tavily 检索结合 LLM 生成的答案。
 
-### 3. /kui/liuyan
+### 3. /stream/api/workflow（流式输出）
+
+- **方法**：POST  
+- **Content-Type**：`application/json`  
+- **Accept**：`application/x-ndjson`  
+- **请求体**：同 `/kui/chat`
+
+```json
+{
+  "threadId": "optional-thread-id",
+  "messages": {
+    "content": "请给出二叉树层序遍历模板",
+    "role": "user"
+  }
+}
+```
+
+- **响应**：流式返回 `WorkflowStreamChunk` JSON 对象，每行一个 JSON，以 `\n` 分隔
+
+```json
+{"stage":"IntentRecognitionNode","node":"IntentRecognitionNode","content":"","intent":"TEMPLATE_RECOMMENDATION","threadId":"xxx","end":false,"timestamp":1234567890,"metadata":null}
+{"stage":"KnowledgeRetrievalNode","node":"KnowledgeRetrievalNode","content":"检索到相关模板...","intent":"TEMPLATE_RECOMMENDATION","threadId":"xxx","end":false,"timestamp":1234567891,"metadata":null}
+{"stage":"TextualNormsNode","node":"TextualNormsNode","content":"以下是","intent":"TEMPLATE_RECOMMENDATION","threadId":"xxx","end":false,"timestamp":1234567892,"metadata":null}
+{"stage":"TextualNormsNode","node":"TextualNormsNode","content":"以下是二叉树","intent":"TEMPLATE_RECOMMENDATION","threadId":"xxx","end":false,"timestamp":1234567893,"metadata":null}
+{"stage":"TextualNormsNode","node":"TextualNormsNode","content":"以下是二叉树层序遍历模板...","intent":"TEMPLATE_RECOMMENDATION","threadId":"xxx","end":true,"timestamp":1234567894,"metadata":null}
+```
+
+说明：`TextualNormsNode` 阶段会持续推送增量内容（`end=false`），直到最后一条 `end=true` 表示流式传输完成。前端可实时渲染实现打字机效果。
+
+### 4. /kui/liuyan
 
 - 简单留言接口，`POST` 文本字符串，服务会写入 Redis List，可用于收集用户反馈。
+
+---
+
+## 🔄 流式输出流程
+
+### 流式工作处理流程图
+
+```plantuml
+@startuml
+skinparam BackgroundColor #F5F5F5
+skinparam Shadowing false
+skinparam DefaultFontName Microsoft YaHei
+skinparam DefaultFontSize 12
+
+title 流式工作处理流程
+
+rectangle "前端发起请求\nPOST /stream/api/workflow" as step1
+
+rectangle "WorkflowService.stream()\n- 创建 ResponseBodyEmitter（用于流式响应）\n- 创建 observer 并注册到 Registry\n- 启动异步工作流执行" as step2
+
+rectangle "工作流执行到 TextualNormsNode\n- 调用大模型生成文本（流式）" as step3
+
+rectangle "大模型流式返回（每次返回一小段文本）\nonPartialResponse(\"Hello\")\nonPartialResponse(\" World\")\nonPartialResponse(\"!\")" as step4
+
+rectangle "关键：调用 observer.onTextualUpdate()\n- 第1次：onTextualUpdate(\"Hello\", \"QUESTION\", false)\n- 第2次：onTextualUpdate(\"Hello World\", \"QUESTION\", false)\n- 第3次：onTextualUpdate(\"Hello World!\", \"QUESTION\", true)" as step5
+
+rectangle "observer 实现（匿名类）\n- 将内容封装成 WorkflowStreamChunk\n- 通过 ResponseBodyEmitter 发送到前端" as step6
+
+rectangle "前端实时接收并显示\n- 看到文本逐字显示（打字机效果）" as step7
+
+step1 --> step2
+step2 --> step3
+step3 --> step4
+step4 --> step5
+step5 --> step6
+step6 --> step7
+
+@enduml
+```
+
+### 流式输出实现原理
+
+1. **前端请求**：客户端发送 POST 请求到 `/stream/api/workflow`，Accept 头设置为 `application/x-ndjson`。
+2. **服务端初始化**：`WorkflowService.stream()` 创建 `ResponseBodyEmitter`，并注册一个 `WorkflowStreamObserver` 到 `WorkflowStreamRegistry`（以 `threadId` 为键）。
+3. **工作流执行**：异步启动 LangGraph4j 工作流，各业务节点（CodeSolve、Debug、KnowledgeRetrieval 等）执行完毕后，状态流转到 `TextualNormsNode`。
+4. **流式生成**：`TextualNormsNode` 调用 `StreamingChatModel.chat()`，注册 `StreamingChatResponseHandler`。
+5. **实时推送**：大模型每次返回部分响应时，触发 `onPartialResponse()`，`TextualNormsNode` 通过 `WorkflowStreamRegistry.get(threadId)` 获取 observer，调用 `onTextualUpdate(content, intent, false)`。
+6. **数据封装**：observer 实现（匿名 Lambda）将内容封装为 `WorkflowStreamChunk`，通过 `ResponseBodyEmitter.send()` 发送到前端。
+7. **前端渲染**：前端通过 EventSource 或 Fetch Stream API 接收 NDJSON 流，实时更新 UI，实现打字机效果。
+
+关键组件：
+- `WorkflowStreamRegistry`：线程安全的观察者注册表，支持多会话并发。
+- `WorkflowStreamObserver`：观察者接口，解耦节点与传输层。
+- `TextualNormsNode`：统一文本规范化节点，所有业务输出最终在此流式生成。
 
 ---
 
