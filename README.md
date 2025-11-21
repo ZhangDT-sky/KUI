@@ -342,37 +342,30 @@ java -jar target/KUI-0.0.1-SNAPSHOT.jar
 
 ### 流式工作处理流程图
 
-```plantuml
-@startuml
-skinparam BackgroundColor #F5F5F5
-skinparam Shadowing false
-skinparam DefaultFontName Microsoft YaHei
-skinparam DefaultFontSize 12
-
-title 流式工作处理流程
-
-rectangle "前端发起请求\nPOST /stream/api/workflow" as step1
-
-rectangle "WorkflowService.stream()\n- 创建 ResponseBodyEmitter（用于流式响应）\n- 创建 observer 并注册到 Registry\n- 启动异步工作流执行" as step2
-
-rectangle "工作流执行到 TextualNormsNode\n- 调用大模型生成文本（流式）" as step3
-
-rectangle "大模型流式返回（每次返回一小段文本）\nonPartialResponse(\"Hello\")\nonPartialResponse(\" World\")\nonPartialResponse(\"!\")" as step4
-
-rectangle "关键：调用 observer.onTextualUpdate()\n- 第1次：onTextualUpdate(\"Hello\", \"QUESTION\", false)\n- 第2次：onTextualUpdate(\"Hello World\", \"QUESTION\", false)\n- 第3次：onTextualUpdate(\"Hello World!\", \"QUESTION\", true)" as step5
-
-rectangle "observer 实现（匿名类）\n- 将内容封装成 WorkflowStreamChunk\n- 通过 ResponseBodyEmitter 发送到前端" as step6
-
-rectangle "前端实时接收并显示\n- 看到文本逐字显示（打字机效果）" as step7
-
-step1 --> step2
-step2 --> step3
-step3 --> step4
-step4 --> step5
-step5 --> step6
-step6 --> step7
-
-@enduml
+```mermaid
+flowchart TD
+    step1["前端发起请求<br/>POST /stream/api/workflow"]
+    step2["WorkflowService.stream()<br/>- 创建 ResponseBodyEmitter（用于流式响应）<br/>- 创建 observer 并注册到 Registry<br/>- 启动异步工作流执行"]
+    step3["工作流执行到 TextualNormsNode<br/>- 调用大模型生成文本（流式）"]
+    step4["大模型流式返回（每次返回一小段文本）<br/>onPartialResponse(\"Hello\")<br/>onPartialResponse(\" World\")<br/>onPartialResponse(\"!\")"]
+    step5["关键：调用 observer.onTextualUpdate()<br/>- 第1次：onTextualUpdate(\"Hello\", \"QUESTION\", false)<br/>- 第2次：onTextualUpdate(\"Hello World\", \"QUESTION\", false)<br/>- 第3次：onTextualUpdate(\"Hello World!\", \"QUESTION\", true)"]
+    step6["observer 实现（匿名类）<br/>- 将内容封装成 WorkflowStreamChunk<br/>- 通过 ResponseBodyEmitter 发送到前端"]
+    step7["前端实时接收并显示<br/>- 看到文本逐字显示（打字机效果）"]
+    
+    step1 --> step2
+    step2 --> step3
+    step3 --> step4
+    step4 --> step5
+    step5 --> step6
+    step6 --> step7
+    
+    style step1 fill:#E3F2FD,stroke:#1976D2,stroke-width:2px
+    style step2 fill:#BBDEFB,stroke:#1565C0,stroke-width:2px
+    style step3 fill:#C8E6C9,stroke:#388E3C,stroke-width:2px
+    style step4 fill:#FFF9C4,stroke:#F57F17,stroke-width:2px
+    style step5 fill:#FFE0B2,stroke:#E65100,stroke-width:2px
+    style step6 fill:#F8BBD0,stroke:#C2185B,stroke-width:2px
+    style step7 fill:#E1BEE7,stroke:#7B1FA2,stroke-width:2px
 ```
 
 ### 流式输出实现原理
