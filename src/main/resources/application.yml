@@ -39,6 +39,13 @@ spring:
     driver-class-name: org.postgresql.Driver
 
 kui:
+  pgvector:
+    host: localhost
+    port: 5432
+    database: embedding
+    user: postgres
+    password: root
+    table: embedding_store
   content:
     auto-load-on-startup: false
     base-path: content
