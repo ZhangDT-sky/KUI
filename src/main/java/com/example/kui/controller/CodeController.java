@@ -11,6 +11,7 @@ import com.example.kui.util.PromptUtil;
 import dev.langchain4j.data.message.AiMessage;
 import dev.langchain4j.data.message.ChatMessage;
 import dev.langchain4j.data.message.UserMessage;
+import lombok.extern.slf4j.Slf4j;
 import org.bsc.langgraph4j.GraphStateException;
 import org.bsc.langgraph4j.RunnableConfig;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,6 +21,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.*;
 
 
+@Slf4j
 @RestController
 @RequestMapping("/kui")
 public class CodeController {
@@ -48,8 +50,6 @@ public class CodeController {
     @Autowired
     private MainWorkflowGraph graph;
 
-    private final WorkflowState workflowState = new WorkflowState(Map.of("messages",new ArrayList<>())) ;
-
     private static final String COMMENT_HASH_KEY = "comment";
 
     @PostMapping("/chat")
@@ -60,15 +60,20 @@ public class CodeController {
     @PostMapping("liuyan")
     public void liuyan(@RequestBody String message){
         String Id = "留言";
-        System.out.println("留言："+message);
+        log.info("收到留言：{}", message);
         redisTemplate.opsForList().leftPush(Id,message);
     }
 
-    @GetMapping("getIntent")
+    @PostMapping("getIntent")
     public String getIntent(@RequestBody String userMessage) throws Exception {
-        workflowState.messages().add(UserMessage.from(userMessage));
-        Optional<WorkflowState> result=graph.graph(workflowState);
-        return result.toString();
+        Map<String, Object> data = new HashMap<>();
+        data.put("messages", new ArrayList<>(List.of(UserMessage.from(userMessage))));
+        data.put("threadId", UUID.randomUUID().toString());
+        
+        WorkflowState state = new WorkflowState(data);
+        Optional<WorkflowState> result = graph.graph(state);
+        return result.map(s -> s.intentRecognition().orElse("OTHER"))
+                .orElse("UNKNOWN");
     }
 
     @PostMapping("/search")
@@ -79,7 +84,7 @@ public class CodeController {
     @GetMapping("/comment")
     public Map<Object, Object> commentList(){
         Map<Object, Object> map = redisTemplate.opsForHash().entries(COMMENT_HASH_KEY);
-        System.out.println(map.toString());
+        log.debug("获取评论列表: {}", map);
         return map;
     }
 

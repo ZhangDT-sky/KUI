@@ -15,6 +15,7 @@ import dev.langchain4j.store.embedding.EmbeddingStore;
 import dev.langchain4j.store.embedding.EmbeddingStoreIngestor;
 import dev.langchain4j.store.embedding.pgvector.PgVectorEmbeddingStore;
 import dev.langchain4j.web.search.tavily.TavilyWebSearchEngine;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -27,6 +28,7 @@ import javax.sql.DataSource;
 import java.util.ArrayList;
 import java.util.List;
 
+@Slf4j
 @Configuration
 public class AgentConfig {
 
@@ -41,7 +43,21 @@ public class AgentConfig {
 
     TavilyWebSearchEngine tavilyWebSearchEngine;
 
-    // 添加配置属性
+    // PgVector 配置属性
+    @Value("${kui.pgvector.host:localhost}")
+    private String pgHost;
+    @Value("${kui.pgvector.port:5432}")
+    private int pgPort;
+    @Value("${kui.pgvector.database:embedding}")
+    private String pgDatabase;
+    @Value("${kui.pgvector.user:postgres}")
+    private String pgUser;
+    @Value("${kui.pgvector.password:root}")
+    private String pgPassword;
+    @Value("${kui.pgvector.table:embedding_store}")
+    private String pgTable;
+
+    // 内容配置属性
     @Value("${kui.content.auto-load-on-startup:false}")
     private boolean autoLoadOnStartup;
     @Value("${kui.content.base-path:content}")
@@ -66,12 +82,12 @@ public class AgentConfig {
     @Bean
     public PgVectorEmbeddingStore  pgVectorEmbeddingStore() {
         return PgVectorEmbeddingStore.builder()
-                .host("localhost")
-                .port(5432)
-                .database("embedding")
-                .user("postgres")
-                .password("root")
-                .table("embedding_store")
+                .host(pgHost)
+                .port(pgPort)
+                .database(pgDatabase)
+                .user(pgUser)
+                .password(pgPassword)
+                .table(pgTable)
                 .dimension(1024)
                 .build();
     }
@@ -95,13 +111,13 @@ public class AgentConfig {
             List<Document> documents = loadAllDocumentsRecursively(contentBasePath);
             if (documents != null && !documents.isEmpty()) {
                 embeddingStoreIngestor.ingest(documents);
-                System.out.println("Successfully loaded " + documents.size() + " documents from content directory");
+                log.info("Successfully loaded {} documents from content directory", documents.size());
             } else {
-                System.out.println("Warning: No documents found in content directory. Skipping document ingestion.");
+                log.warn("No documents found in content directory. Skipping document ingestion.");
             }
         }
         else{
-            System.out.println("Document auto-loading is disabled. Set 'kui.content.auto-load-on-startup=true' to enable.");
+            log.info("Document auto-loading is disabled. Set 'kui.content.auto-load-on-startup=true' to enable.");
         }
         return pgVectorEmbeddingStore;
     }
@@ -159,19 +175,18 @@ public class AgentConfig {
                         document.metadata().put("source", classpathPath);
                         document.metadata().put("filename", resource.getFilename());
                         documents.add(document);
-                        System.out.println("Loaded document: " + classpathPath);
+                        log.info("Loaded document: {}", classpathPath);
                     }catch (Exception e){
-                        System.out.println("Skipped: " + resource.getFilename() + " - " + e.getMessage());
+                        log.warn("Skipped: {} - {}", resource.getFilename(), e.getMessage());
                         // 调试信息
                         if(e.getMessage() != null && e.getMessage().contains("not found")){
-                            System.out.println("  Resource URL: " + resource.getURL());
+                            log.debug("  Resource URL: {}", resource.getURL());
                         }
                     }
                 }
             }
         }catch (Exception e){
-            System.err.println("Error loading documents: " + e.getMessage());
-            e.printStackTrace();
+            log.error("Error loading documents: {}", e.getMessage(), e);
         }
         return documents;
     }

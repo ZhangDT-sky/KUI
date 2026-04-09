@@ -7,6 +7,7 @@ import org.bsc.langgraph4j.*;
 import org.bsc.langgraph4j.checkpoint.MemorySaver;
 import org.bsc.langgraph4j.langchain4j.serializer.jackson.LC4jJacksonStateSerializer;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 import java.util.Iterator;
@@ -39,71 +40,61 @@ public class MainWorkflowGraph {
     @Autowired
     private KnowledgeRetrievalNode knowledgeRetrievalNode;
 
-    private CompiledGraph<WorkflowState> compiledGraph;
+    @Bean
+    public CompiledGraph<WorkflowState> compiledGraph() throws GraphStateException {
+        var serializer = new LC4jJacksonStateSerializer<>(WorkflowState::new);
 
-    private CompiledGraph<WorkflowState> getCompiledGraph() throws GraphStateException {
-        if (compiledGraph == null) {
-            var serializer = new LC4jJacksonStateSerializer<>(WorkflowState::new);
-
-            StateGraph<WorkflowState> work = new StateGraph<>(
-                    WorkflowState.SCHEMA,
-                    serializer  // 使用 Jackson 序列化器而不是默认的
-            )
-                    .addNode("IntentRecognitionNode", node_async(
-                            intentRecognitionNode
-                    ))
-                    .addNode("CodeSolveNode",node_async(codeSolveNode))
-                    .addNode("OtherNode", node_async(otherNode))
-                    .addNode("KnowledgeRetrievalNode",node_async(knowledgeRetrievalNode))
-                    .addNode("DebugNode",node_async(debugNode))
-                    .addNode("TextualNormsNode",node_async(textualNormsNode))
-                    .addEdge(START,"IntentRecognitionNode")
-                    .addConditionalEdges("IntentRecognitionNode",
-                            edge_async(state->{
-                                String recognizedIntent = state.intentRecognition().orElse("OTHER");
-                                System.out.println("===============test==============");
-                                System.out.println(recognizedIntent);
-                                if (recognizedIntent.equals("PROBLEM_SOLVING")) {
-                                    return "CodeSolveNode";
-                                }
-                                else if (recognizedIntent.equals("TEMPLATE_RECOMMENDATION")) {
-                                    return "KnowledgeRetrievalNode";
-                                }
-                                else if (recognizedIntent.equals("CODE_DEBUGGING")) {
-                                    return "DebugNode";
-                                }
-                                else{
-                                    return "OtherNode";
-                                }
-                            }),
-                            Map.of(
+        StateGraph<WorkflowState> work = new StateGraph<>(
+                WorkflowState.SCHEMA,
+                serializer
+        )
+                .addNode("IntentRecognitionNode", node_async(intentRecognitionNode))
+                .addNode("CodeSolveNode", node_async(codeSolveNode))
+                .addNode("OtherNode", node_async(otherNode))
+                .addNode("KnowledgeRetrievalNode", node_async(knowledgeRetrievalNode))
+                .addNode("DebugNode", node_async(debugNode))
+                .addNode("TextualNormsNode", node_async(textualNormsNode))
+                .addEdge(START, "IntentRecognitionNode")
+                .addConditionalEdges("IntentRecognitionNode",
+                        edge_async(state -> {
+                            String recognizedIntent = state.intentRecognition().orElse("OTHER");
+                            log.info("Recognized intent: {}", recognizedIntent);
+                            if (recognizedIntent.equals("PROBLEM_SOLVING")) {
+                                return "CodeSolveNode";
+                            } else if (recognizedIntent.equals("TEMPLATE_RECOMMENDATION")) {
+                                return "KnowledgeRetrievalNode";
+                            } else if (recognizedIntent.equals("CODE_DEBUGGING")) {
+                                return "DebugNode";
+                            } else {
+                                return "OtherNode";
+                            }
+                        }),
+                        Map.of(
                                 "CodeSolveNode", "CodeSolveNode",
-                                "OtherNode","OtherNode",
-                                "KnowledgeRetrievalNode","KnowledgeRetrievalNode",
-                                "DebugNode","DebugNode"
-                            )
-                    )
-                    .addEdge("DebugNode","TextualNormsNode")
-                    .addEdge("CodeSolveNode","TextualNormsNode")
-                    .addEdge("KnowledgeRetrievalNode","TextualNormsNode")
-                    .addEdge("OtherNode","TextualNormsNode")
-                    .addEdge("TextualNormsNode",END);
-            var checkPointSaver = new MemorySaver();
-            var config = CompileConfig.builder()
-                    .checkpointSaver(checkPointSaver)
-                    .build();
-            compiledGraph = work.compile(config);
-        }
-        return compiledGraph;
+                                "OtherNode", "OtherNode",
+                                "KnowledgeRetrievalNode", "KnowledgeRetrievalNode",
+                                "DebugNode", "DebugNode"
+                        )
+                )
+                .addEdge("DebugNode", "TextualNormsNode")
+                .addEdge("CodeSolveNode", "TextualNormsNode")
+                .addEdge("KnowledgeRetrievalNode", "TextualNormsNode")
+                .addEdge("OtherNode", "TextualNormsNode")
+                .addEdge("TextualNormsNode", END);
+
+        var checkPointSaver = new MemorySaver();
+        var config = CompileConfig.builder()
+                .checkpointSaver(checkPointSaver)
+                .build();
+        return work.compile(config);
     }
-    
+
     public Optional<WorkflowState> graph(WorkflowState state) throws GraphStateException {
-        AsyncGenerator<NodeOutput<WorkflowState>> generator = getCompiledGraph().stream(state.data());
+        AsyncGenerator<NodeOutput<WorkflowState>> generator = compiledGraph().stream(state.data());
 
         WorkflowState finalState = null;
         Iterator<NodeOutput<WorkflowState>> iterator = generator.iterator();
 
-        // 遍历所有节点输出
         while (iterator.hasNext()) {
             NodeOutput<WorkflowState> nodeOutput = iterator.next();
             WorkflowState nodeState = nodeOutput.state();
@@ -113,7 +104,6 @@ public class MainWorkflowGraph {
                 log.debug("Processed node: {}, state: {}", nodeOutput.node(), nodeState);
             }
 
-            // 如果到达 END 节点，可以提前结束（可选）
             if (nodeOutput.isEND()) {
                 log.debug("Reached END node");
                 break;
@@ -121,16 +111,16 @@ public class MainWorkflowGraph {
         }
 
         return Optional.ofNullable(finalState);
-
     }
+
     public Optional<WorkflowState> graph(Map<String, Object> initialState, RunnableConfig config)
             throws GraphStateException {
-        var state = getCompiledGraph().invoke(initialState, config);
+        var state = compiledGraph().invoke(initialState, config);
         return Optional.ofNullable(state.get());
     }
 
     public AsyncGenerator<NodeOutput<WorkflowState>> stream(Map<String, Object> initialState,
                                                             RunnableConfig config) throws GraphStateException {
-        return getCompiledGraph().stream(initialState, config);
+        return compiledGraph().stream(initialState, config);
     }
 }

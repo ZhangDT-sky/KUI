@@ -3,9 +3,6 @@ package com.example.kui.util;
 import dev.langchain4j.data.message.*;
 import org.springframework.stereotype.Service;
 
-import java.lang.reflect.Method;
-import java.util.List;
-
 @Service
 public class ChatMessageUtil {
 
@@ -56,40 +53,36 @@ public class ChatMessageUtil {
     }
 
     /**
-     * Extracts text content from a ChatMessage using reflection and various fallback methods
+     * Extracts text content from a ChatMessage using native methods and fallbacks.
      */
     public String extractTextFromMessage(ChatMessage message) {
         if (message == null) {
             return null;
         }
         
-        // Try to get contents() method which returns List<Content>
-        try {
-            Method contentsMethod = message.getClass().getMethod("contents");
-            @SuppressWarnings("unchecked")
-            List<Content> contents = (List<Content>) contentsMethod.invoke(message);
-            if (contents != null && !contents.isEmpty()) {
-                Content firstContent = contents.get(0);
-                if (firstContent instanceof TextContent textContent) {
-                    String text = textContent.text();
-                    if (text != null && !text.isEmpty()) {
-                        return text;
-                    }
-                }
-            }
-        } catch (Exception e) {
-            // Method doesn't exist or failed, try other approaches
+        // Use native methods for common message types
+        if (message instanceof UserMessage userMessage) {
+            return userMessage.contents().stream()
+                    .filter(c -> c instanceof TextContent)
+                    .map(c -> ((TextContent) c).text())
+                    .findFirst()
+                    .orElse(null);
+        } else if (message instanceof AiMessage aiMessage) {
+            return aiMessage.text();
+        } else if (message instanceof SystemMessage systemMessage) {
+            return systemMessage.text();
         }
 
-        // Fallback: Try to extract from string representation
-        String extracted = extractContentFromString(message.toString());
-        // Validate extracted content - should not be null or empty, and should not look like an object reference
-        if (extracted != null && !extracted.isEmpty() && !extracted.contains("@") && extracted.length() < 1000) {
-            return extracted;
+        // Fallback: Try to extract from string representation if it looks like a simple text message
+        String msgStr = message.toString();
+        String extracted = extractContentFromString(msgStr);
+        
+        // If extracted is still null, but the string is short and doesn't look like an object reference, use it.
+        if (extracted == null && msgStr != null && !msgStr.contains("@") && msgStr.length() < 500) {
+            return msgStr;
         }
         
-        // Last resort: return null to use original message
-        return null;
+        return extracted;
     }
 
     /**
